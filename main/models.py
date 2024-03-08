@@ -39,7 +39,7 @@ class Course(models.Model):
     name = models.CharField(max_length=250, blank=False,
                             null=False)
 
-    SHIFT_cHOICES = [
+    SHIFT_CHOICES = [
         ('Morning', 'Morning'),
         ('Afternoon', 'Afternoon'),
         ('Night', 'Night'),
@@ -54,7 +54,7 @@ class Course(models.Model):
         ('Youth and Adult Education (EJA) ', 'EJA'),
     ]
     shift = models.CharField(
-        max_length=10, choices=SHIFT_cHOICES, null=False, blank=False)
+        max_length=10, choices=SHIFT_CHOICES, null=False, blank=False)
     type = models.CharField(
         max_length=32, choices=TYPE_cHOICES, null=False, blank=False)
     time_required = models.IntegerField()
