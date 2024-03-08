@@ -315,12 +315,26 @@ class PreviousSchoolView(BaseView):
     def __init__(self, model=PreviousSchool, param_name="name", serializer=PreviousSchoolSerializer):
         super().__init__(model, param_name, serializer)
 
+    def get_type_from_name(name):
+        TYPE_MAPPING = {
+            'Educação de Jovens e Adultos (EJA)': ['EJA'],
+            'Técnico Integrado': ['Técnico Integrado'],
+            'Técnico Subsequente': ['Técnico Subsequente'],
+            'Tecnólogo': ['Tecnólogo'],
+            'Bacharelado': ['Bacharelado'],
+            'Licenciatura': ['Licenciatura']
+        }
+
+        for key, value in TYPE_MAPPING.items():
+            for keyword in value:
+                if keyword.lower() in name.lower():
+                    return key
+        return None
     def get(self, request: HttpRequest, pk: str = None) -> Response:
         return super().get(request, pk)
 
     def post(self, request: HttpRequest) -> Response:
         return super().post(request)
-
     def put(self, request: HttpRequest, pk: str = None) -> Response:
         return super().put(request, pk)
 
@@ -336,10 +350,34 @@ class CourseView(BaseView):
         return super().get(request, pk)
 
     def post(self, request: HttpRequest) -> Response:
-        return super().post(request)
+        data = request.data 
+        if data['type'] != None:
+            return super().post(request)
+        else:
+            name = data['name']
+            type_from_name = self.get_type_from_name(name)
+            if type_from_name == None:
+                return Response({"error": "Type could not be parsed"}, status=status.HTTP_403_FORBIDDEN)
+    
+            data['type'] = type_from_name
+            request.data = data
+            return super().post(request)
+
 
     def put(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().put(request, pk)
+        data = request.data 
+        if data['type'] != None:
+            return super().put(request)
+        else:
+            name = data['name']
+            type_from_name = self.get_type_from_name(name)
+            if type_from_name == None:
+                return Response({"error": "Type could not be parsed"}, status=status.HTTP_403_FORBIDDEN)
+    
+            data['type'] = type_from_name
+            request.data = data
+            return super().put(request)
+
 
     def delete(self, request: HttpRequest, pk: str = None) -> Response:
         return super().delete(request, pk)
