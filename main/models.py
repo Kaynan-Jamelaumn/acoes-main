@@ -10,7 +10,7 @@ class City(models.Model):
 
 class Address(models.Model):
     address = models.CharField(max_length=250, blank=False, null=False)
-    complemento = models.CharField(max_length=250, blank=True, null=True)
+    complement = models.CharField(max_length=250, blank=True, null=True)
     neighborhood = models.CharField(max_length=50, blank=True, null=True)
 
     city = models.ForeignKey(City, on_delete=models.CASCADE)
@@ -53,7 +53,7 @@ class Course(models.Model):
         ('Extension  ', 'Extension'),
         ('Youth and Adult Education (EJA) ', 'EJA'),
     ]
-    shifit = models.CharField(
+    shift = models.CharField(
         max_length=10, choices=SHIFT_cHOICES, null=False, blank=False)
     type = models.CharField(
         max_length=32, choices=TYPE_cHOICES, null=False, blank=False)
@@ -94,7 +94,7 @@ class Student(models.Model):
     mother_name = models.CharField(max_length=150, null=False, blank=False)
     father_name = models.CharField(max_length=150, null=True, blank=True)
     birth_date = models.DateField(null=False, blank=False)
-    registration = models.IntegerField(null=True, blank=True)
+    registration = models.IntegerField(null=True, blank=True, unique=True)
     SEX_CHOICES = [
         ('Male', 'Male'),
         ('Female', 'Female'),
