@@ -123,9 +123,18 @@ class Student(models.Model):
         ('Gênero Fluído', 'Gênero Fluído'),
         ('Outro', 'Outro'),
     ]
+    COLOR_RACE_CHOISES = [
+        ('Branco', 'Branco'),
+        ('Pardo', 'Pardo'),
+        ('Preto', 'Preto'),
+        ('Não Declarada', 'Não Declarada'),
+        ('Outro', 'Outro'),
+    ]
     sex = models.CharField(
         max_length=10, choices=SEX_CHOICES, null=True, blank=True)
     gender = models.CharField(
+        max_length=30, choices=GENDER_CHOICES, null=True, blank=True)
+    color_race = models.CharField(
         max_length=30, choices=GENDER_CHOICES, null=True, blank=True)
     disability = models.CharField(
         max_length=56, choices=DISABILITY_CHOICES, null=True, blank=True)
@@ -190,11 +199,13 @@ class StudentCourse(models.Model):
 class Status(models.Model):
     STATUS_CHOICES = [
     ('Cancelado', 'Cancelado'),
-    ('Em Progresso', 'Em Progresso'),
+    ('Cancelado', 'Cancelado'),
+    ('Cursando', 'Cursando'),
+    ('Trancado', 'Trancado'),
     ('Concluído', 'Concluído')
 
     ]
-    status = models.CharField(
+    status = models.CharField(  
         max_length=12, choices=STATUS_CHOICES, null=False, blank=False)
     current_semester = models.CharField(max_length=10, null=False, blank=False)
     student_course = models.ForeignKey(StudentCourse, on_delete=models.CASCADE)

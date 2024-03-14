@@ -13,6 +13,7 @@ from .views import (
     SearchStudentFilterView,
     StudentsBySex,
     StudentsByGender,
+    StudentsByColor_Race,
     StudentsByDisability,
     StudentsByMother,
     StudentsByFather,
@@ -59,6 +60,11 @@ urlpatterns = [
          StudentsByGender.as_view(), name='student-by-gender-list'),
     path('search-student-by-gender/<str:gender>/',
          StudentsByGender.as_view(), name='student-by-gender-detail'),
+
+    path('search-student-by-color-race/',
+         StudentsByColor_Race.as_view(), name='student-by-color-race-list'),
+    path('search-student-by-color-race/<str:color_race>/',
+         StudentsByColor_Race.as_view(), name='student-by-color-race-detail'),
 
     path('search-student-by-disability/',
          StudentsByDisability.as_view(), name='student-by-disability-list'),

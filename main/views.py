@@ -439,6 +439,17 @@ class StudentsByGender(APIView):
             return Response({"students": serializer.data}, status=status.HTTP_200_OK)
         return Response({"students": None}, status=status.HTTP_200_OK)
 
+class StudentsByColor_Race(APIView):
+
+    def get(self, request: HttpRequest, color_race: str = None) -> Response:
+        if not color_race:
+            color_race = request.data.get('color_race')
+
+        object = Student.objects.filter(color_race=color_race)
+        if object:
+            serializer = StudentSerializer(object, many=True)
+            return Response({"students": serializer.data}, status=status.HTTP_200_OK)
+        return Response({"students": None}, status=status.HTTP_200_OK)
 
 class StudentsByDisability(APIView):
 
