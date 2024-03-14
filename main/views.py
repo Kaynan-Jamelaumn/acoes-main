@@ -12,14 +12,14 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.hashers import make_password
 
 from .models import CustomUser
-
-
 class BaseView(APIView):
 
-    def __init__(self, model: Model, param_name: str, serializer: Serializer):
+    def __init__(self, model: Model, param_name: str, serializer: Serializer,  allowed_methods : list[str] = ['get', 'post', 'put', 'delete']):
         self.__model = model
         self.__param_name = param_name
         self.__serializer = serializer
+        self.__allowed_methods = allowed_methods
+
 
     @property
     def model(self) -> Model:
@@ -44,6 +44,15 @@ class BaseView(APIView):
     @serializer.setter
     def serializer(self, value: Serializer):
         self.__serializer = value
+
+    @property
+    def allowed_methods(self) -> list[str]:
+        return self.__allowed_methods
+
+    @allowed_methods.setter
+    def allowed_methods(self, value: list[str]):
+        self.__allowed_methods = value
+
 
     def is_allowed(self, request: HttpRequest):
         return request.user.is_staff
@@ -104,13 +113,17 @@ class BaseView(APIView):
         return Response({"error": f"{self.model.__name__} not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def get(self, request: HttpRequest, pk: str | int = None, allowed: bool = True, permission_type: str = None) -> Response:
-         if not allowed and not self.is_allowed(request): # eu n lembro o q siginificava isso aqui é se allowed == false ?
+        if 'get' not in self.allowed_methods:
+            return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        if not allowed and not self.is_allowed(request): # eu n lembro o q siginificava isso aqui é se allowed == false ?
             return self.not_allowed_response(permission_type)
-         else:
+        else:
             serializer = self.to_retrieve(request, pk)
             return Response(serializer.data,  status=status.HTTP_200_OK)
 
     def post(self, request: HttpRequest, allowed: bool = False, permission_type: str = None) -> Response:
+        if 'post' not in self.allowed_methods:
+            return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
         if not allowed and not self.is_allowed(request):
             return self.not_allowed_response(permission_type)
 
@@ -123,6 +136,8 @@ class BaseView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request: HttpRequest, pk: str | int = None, allowed: bool = False, permission_type: str | None = None) -> Response:
+        if 'put' not in self.allowed_methods:
+            return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
         if not allowed and not self.is_allowed(request):
             return self.not_allowed_response(permission_type)
 
@@ -136,6 +151,8 @@ class BaseView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request: HttpRequest, pk: str | int = None, allowed: bool = False, permission_type: str | None = None) -> Response:
+        if 'delete' not in self.allowed_methods:
+            return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
         if not allowed and not self.is_allowed(request):
             return self.not_allowed_response(permission_type)
 
@@ -248,7 +265,7 @@ class CityView(BaseView):
         super().__init__(model, param_name, serializer)
 
     def get(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().get(request, pk)
+        return super().get(request, pk,False)
 
     def post(self, request: HttpRequest) -> Response:
         return super().post(request)
@@ -265,7 +282,7 @@ class AddressView(BaseView):
         super().__init__(model, param_name, serializer)
 
     def get(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().get(request, pk)
+        return super().get(request, pk, False)
 
     def post(self, request: HttpRequest) -> Response:
         return super().post(request)
@@ -282,7 +299,7 @@ class InstituteView(BaseView):
         super().__init__(model, param_name, serializer)
 
     def get(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().get(request, pk)
+        return super().get(request, pk, False)
 
     def post(self, request: HttpRequest) -> Response:
         return super().post(request)
@@ -299,7 +316,7 @@ class InstituteView(BaseView):
         super().__init__(model, param_name, serializer)
 
     def get(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().get(request, pk)
+        return super().get(request, pk, False)
 
     def post(self, request: HttpRequest) -> Response:
         return super().post(request)
@@ -331,7 +348,7 @@ class PreviousSchoolView(BaseView):
                     return key
         return None
     def get(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().get(request, pk)
+        return super().get(request, pk, False)
 
     def post(self, request: HttpRequest) -> Response:
         return super().post(request)
@@ -347,7 +364,7 @@ class CourseView(BaseView):
         super().__init__(model, param_name, serializer)
 
     def get(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().get(request, pk)
+        return super().get(request, pk, False)
 
     def post(self, request: HttpRequest) -> Response:
         data = request.data 
@@ -388,7 +405,7 @@ class StudentView(BaseView):
         super().__init__(model, param_name, serializer)
 
     def get(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().get(request, pk)
+        return super().get(request, pk, False)
 
     def post(self, request: HttpRequest) -> Response:
         return super().post(request)
@@ -410,86 +427,40 @@ class SearchStudentFilterView(APIView):
         studants_serializer = StudentSerializer(studant, many=True)
 
         serialized_data = {
-            'studant': studants_serializer.data,
+            'student': studants_serializer.data,
         }
         return Response(serialized_data, status=status.HTTP_200_OK)
+    
+class StudentsByAttributeView(BaseView):
+    def __init__(self, model=Student, param_name="attribute", serializer=StudentSerializer, allowed_methods=['get']):
+        super().__init__(model, param_name, serializer, allowed_methods)
 
+    def get(self, request: HttpRequest, pk: str = None) -> Response:
+        return super().get(request, pk, False)
 
-class StudentsBySex(APIView):
+class StudentsByGender(StudentsByAttributeView):
+    def __init__(self):
+        super().__init__(model=Student, param_name="gender", serializer=StudentSerializer)
 
-    def get(self, request: HttpRequest, sex: str = None) -> Response:
-        if not sex:
-            sex = request.data.get('sex')
+class StudentsBySex(StudentsByAttributeView):
+    def __init__(self):
+        super().__init__(model=Student, param_name="sex", serializer=StudentSerializer)
 
-        object = Student.objects.filter(sex=sex)
-        if object:
-            serializer = StudentSerializer(object, many=True)
-            return Response({"students": serializer.data}, status=status.HTTP_200_OK)
-        return Response({"students": None}, status=status.HTTP_200_OK)
+class StudentsByColorRace(StudentsByAttributeView):
+    def __init__(self):
+        super().__init__(model=Student, param_name="color_race", serializer=StudentSerializer)
 
-class StudentsByGender(APIView):
+class StudentsByDisability(StudentsByAttributeView):
+    def __init__(self):
+        super().__init__(model=Student, param_name="disability", serializer=StudentSerializer)
 
-    def get(self, request: HttpRequest, gender: str = None) -> Response:
-        if not gender:
-            gender = request.data.get('gender')
+class StudentsByMother(StudentsByAttributeView):
+    def __init__(self):
+        super().__init__(model=Student, param_name="mother", serializer=StudentSerializer)
 
-        object = Student.objects.filter(gender=gender)
-        if object:
-            serializer = StudentSerializer(object, many=True)
-            return Response({"students": serializer.data}, status=status.HTTP_200_OK)
-        return Response({"students": None}, status=status.HTTP_200_OK)
-
-class StudentsByColor_Race(APIView):
-
-    def get(self, request: HttpRequest, color_race: str = None) -> Response:
-        if not color_race:
-            color_race = request.data.get('color_race')
-
-        object = Student.objects.filter(color_race=color_race)
-        if object:
-            serializer = StudentSerializer(object, many=True)
-            return Response({"students": serializer.data}, status=status.HTTP_200_OK)
-        return Response({"students": None}, status=status.HTTP_200_OK)
-
-class StudentsByDisability(APIView):
-
-    def get(self, request: HttpRequest, disability: str = None) -> Response:
-        if not disability:
-            disability = request.data.get('disability')
-
-        object = Student.objects.filter(disability=disability)
-        if object:
-            serializer = StudentSerializer(object, many=True)
-            return Response({"students": serializer.data}, status=status.HTTP_200_OK)
-        return Response({"students": None}, status=status.HTTP_200_OK)
-
-
-
-
-class StudentsByMother(APIView):
-
-    def get(self, request: HttpRequest, mother_name: str = None) -> Response:
-        if not mother_name:
-            mother_name = request.data.get('mother_name')
-
-        object = Student.objects.filter(mother_name__icontains=mother_name)
-        if object:
-            serializer = StudentSerializer(object, many=True)
-            return Response({"students": serializer.data}, status=status.HTTP_200_OK)
-        return Response({"students": None}, status=status.HTTP_200_OK)
-
-
-class StudentsByFather(APIView):
-
-    def get(self, request: HttpRequest, father_name: str = None) -> Response:
-        if not father_name:
-            father_name = request.data.get('father_name')
-
-        object = Student.objects.filter(father_name__icontains=father_name)
-        if object:
-            serializer = StudentSerializer(object, many=True)
-            return Response({"students": serializer.data}, status=status.HTTP_200_OK)
-        return Response({"students": None}, status=status.HTTP_200_OK)
+class StudentsByFather(StudentsByAttributeView):
+    def __init__(self):
+        super().__init__(model=Student, param_name="father", serializer=StudentSerializer)
 
 
 class StudentsByCity(APIView):
@@ -546,17 +517,3 @@ class StudentsByCourse(APIView):
             serializer = StudentCourseSerializer(object, many=True)
             return Response({"students": serializer.data}, status=status.HTTP_200_OK)
         return Response({"students": None}, status=status.HTTP_200_OK)
-
-
-# class StudentsByInstituteAndShift(APIView):
-
-#     def get(self, request: HttpRequest, institute: str = None, id: int = None) -> Response:
-#         if not id:
-#             id = request.data.get('id')
-#         if not institute:
-#             institute = request.data.get('institute')
-#         object = Student.objects.filter(id=id, institute=institute)
-#         if object:
-#             serializer = StudentCourseSerializer(object, many=True)
-#             return Response({"students": serializer.data}, status=status.HTTP_200_OK)
-#         return Response({"students": None}, status=status.HTTP_200_OK)
