@@ -1,10 +1,8 @@
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.db.models import Model
 from django.http import HttpRequest
 from django.db.models import Q
-from rest_framework.serializers import Serializer
 from .serializers import CustomUserSerializer, CustomUserListSerializer, CurrentCustomUserSerializer, CitySerializer, AddressSerializer, InstituteSerializer, PreviousSchoolSerializer, CourseSerializer, StatusSerializer, StudentSerializer, StudentCourseSerializer
 from .models import CustomUser, City, Address, Institute, PreviousSchool, Course, Student, StudentCourse, Status
 from rest_framework.permissions import IsAuthenticated
@@ -12,156 +10,7 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.hashers import make_password
 
 from .models import CustomUser
-class BaseView(APIView):
-
-    def __init__(self, model: Model, param_name: str, serializer: Serializer,  allowed_methods : list[str] = ['get', 'post', 'put', 'delete']):
-        self.__model = model
-        self.__param_name = param_name
-        self.__serializer = serializer
-        self.__allowed_methods = allowed_methods
-
-
-    @property
-    def model(self) -> Model:
-        return self.__model
-
-    @model.setter
-    def model(self, value: Model):
-        self.__model = value
-
-    @property
-    def param_name(self) -> str:
-        return self.__param_name
-
-    @param_name.setter
-    def param_name(self, value: str):
-        self.__param_name = value
-
-    @property
-    def serializer(self) -> Serializer:
-        return self.__serializer
-
-    @serializer.setter
-    def serializer(self, value: Serializer):
-        self.__serializer = value
-
-    @property
-    def allowed_methods(self) -> list[str]:
-        return self.__allowed_methods
-
-    @allowed_methods.setter
-    def allowed_methods(self, value: list[str]):
-        self.__allowed_methods = value
-
-
-    def is_allowed(self, request: HttpRequest):
-        return request.user.is_staff
-
-    def not_allowed_response(self, permission_type: str | None = None):
-        if permission_type:
-            return Response({f"error": "You do not have the necessary permission to {permission_type} an/a {self.model}"}, status=status.HTTP_403_FORBIDDEN)
-        return Response({"error": "You do not have the necessary permissions"}, status=status.HTTP_403_FORBIDDEN)
-
-    def check_obj(self, obj):
-        if not obj:
-            return Response({"error": f"{self.model.__name__} not found"}, status=status.HTTP_404_NOT_FOUND)
-
-    def to_retrieve(self, request: Model = None, pk: str | int = None, many: bool = False):
-
-        if pk:
-            if many == True:
-                obj = self.get_object(pk=pk, many=True)
-                self.check_obj(obj)
-                serializer = self.serializer(obj,  many=True)
-            else:
-                obj = self.get_object(pk)
-                self.check_obj(obj)
-                serializer = self.serializer(obj)
-        elif request.data.get(self.param_name):
-            if many == True:
-                obj = self.get_object(request, many=True)
-                self.check_obj(obj)
-                serializer = self.__serializer(obj, many=True)
-            else:
-                obj = self.get_object(request)
-                self.check_obj(obj)
-                serializer = self.__serializer(obj)
-
-        else:
-            serializer = self.__serializer(
-                data=self.model.objects.all(), many=True)
-            serializer.is_valid()
-        return serializer
-
-    def get_object(self, pk: str | int, request: HttpRequest = None, many: bool = False):
-        if many == True:
-            if pk:
-                # Retorna o primeiro objeto correspondente.__param_name: pk})
-                obj = self.model.objects.filter(**{self.__param_name: pk})
-            else:
-                obj = self.model.objects.filter(
-                    **{self.__param_name: request.data.get(self.__param_name)})
-        else:
-            if pk:
-                # Retorna o primeiro objeto correspondente.__param_name: pk})
-                obj = self.model.objects.get(**{self.__param_name: pk})
-            else:
-                obj = self.model.objects.get(
-                    **{self.__param_name: request.data.get(self.__param_name)})
-        if obj:
-            return obj
-        return Response({"error": f"{self.model.__name__} not found"}, status=status.HTTP_404_NOT_FOUND)
-
-    def get(self, request: HttpRequest, pk: str | int = None, allowed: bool = True, permission_type: str = None) -> Response:
-        if 'get' not in self.allowed_methods:
-            return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        if not allowed and not self.is_allowed(request): # eu n lembro o q siginificava isso aqui é se allowed == false ?
-            return self.not_allowed_response(permission_type)
-        else:
-            serializer = self.to_retrieve(request, pk)
-            return Response(serializer.data,  status=status.HTTP_200_OK)
-
-    def post(self, request: HttpRequest, allowed: bool = False, permission_type: str = None) -> Response:
-        if 'post' not in self.allowed_methods:
-            return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        if not allowed and not self.is_allowed(request):
-            return self.not_allowed_response(permission_type)
-
-        elif not request.user.is_authenticated:
-            return Response({"error": f"You must be logged in to post a/an{self.model.__name__}"}, status=status.HTTP_403_FORBIDDEN)
-        serializer = self.serializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def put(self, request: HttpRequest, pk: str | int = None, allowed: bool = False, permission_type: str | None = None) -> Response:
-        if 'put' not in self.allowed_methods:
-            return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        if not allowed and not self.is_allowed(request):
-            return self.not_allowed_response(permission_type)
-
-        elif not request.user.is_authenticated:
-            return Response({"error": f"You must be logged in to edit a/an{self.model.__name__}"}, status=status.HTTP_403_FORBIDDEN)
-        obj = self.get_object(pk, request)
-        serializer = self.serializer(obj, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request: HttpRequest, pk: str | int = None, allowed: bool = False, permission_type: str | None = None) -> Response:
-        if 'delete' not in self.allowed_methods:
-            return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        if not allowed and not self.is_allowed(request):
-            return self.not_allowed_response(permission_type)
-
-        elif not request.user.is_authenticated:
-            return Response({"error": f"You must be logged in to delete a/an{self.model.__name__}"}, status=status.HTTP_403_FORBIDDEN)
-        obj = self.get_object(pk, request)
-        obj.delete()
-        return Response({"success": True}, status=status.HTTP_200_OK)
-
+from BaseView import BaseView
 
 class CurrentUserView(APIView):
 
@@ -186,57 +35,201 @@ class CustomUserView(BaseView):
         #     return "Email field is required"
         return False
 
-    def post(self, request: HttpRequest) -> Response:
-        message = self.required_fields(request)
-        if message:
-            return Response({"detail": "Email field is required"}, status=status.HTTP_400_BAD_REQUEST)
-        request.data['password'] = make_password(request.data['password'])
+    def post(self, request: HttpRequest, allowed: bool = False, permission_type: str = None) -> Response:
+        if 'post' not in self.allowed_methods:
+            return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        if not allowed and not self.is_allowed(request):
+            return self.not_allowed_response(permission_type)
 
-        serializer = CustomUserSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        user = serializer.save()
-        login(request, user)
-
-        return Response({"user": serializer.data}, status=status.HTTP_201_CREATED)
-
-    def put(self, request: HttpRequest, id: id = None) -> Response:
-        user = self.to_retrieve(request, id)
-
-        if isinstance(user, self.serializer):  # Check if user is a serializer
-            user_instance = user.instance  # Extract the model instance from the serializer
+        elif not request.user.is_authenticated:
+            return Response({"error": f"You must be logged in to post a/an{self.model.__name__}"}, status=status.HTTP_403_FORBIDDEN)
+        
+        self.parse_csv_data_in_request(request)
+        
+        is_bulk = isinstance(request.data, list)
+        if is_bulk:
+            instances = []
+            errors = []
+            for item in request.data:
+                serializer = self.serializer(data=item)
+                if serializer.is_valid():
+                    instance = serializer.save()
+                    instances.append(serializer.data)
+                else:
+                    errors.append(serializer.errors)
+            if errors:
+                return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(instances, status=status.HTTP_201_CREATED)
         else:
-            user_instance = user
-
-        if request.user != user_instance and not request.user.is_staff:
-            return Response({"error": "You do not have permission to edit this user"}, status=status.HTTP_403_FORBIDDEN)
-
-        if 'password' in request.data:
-            request.data['password'] = make_password(request.data['password'])
-
-        serializer = self.serializer(
-            user_instance, data=request.data, partial=True)
-
-        if not serializer.is_valid():
+            serializer = self.serializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    def put(self, request: HttpRequest, pk: str | int = None, allowed: bool = False, permission_type: str | None = None) -> Response:
+        if 'put' not in self.allowed_methods:
+            return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        if not allowed and not self.is_allowed(request):
+            return self.not_allowed_response(permission_type)
 
-    def delete(self, request: HttpRequest, id: id = None) -> Response:
-        user = self.to_retrieve(request, id)
-
-        if isinstance(user, self.serializer):  # Check if user is a serializer
-            user_instance = user.instance  # Extract the model instance from the serializer
+        elif not request.user.is_authenticated:
+            return Response({"error": f"You must be logged in to edit a/an{self.model.__name__}"}, status=status.HTTP_403_FORBIDDEN)
+        
+        self.parse_csv_data_in_request(request)
+        
+        is_bulk = isinstance(request.data, list)
+        if is_bulk:
+            instances = []
+            for item in request.data:
+                obj = self.get_object(item.get(self.param_name), request)
+                serializer = self.serializer(obj, data=item, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    instances.append(serializer.data)
+                else:
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(instances, status=status.HTTP_200_OK)
         else:
-            user_instance = user
-        if request.user != user and not request.user.is_staff:
-            return Response({"error": "You do not have permission to delete this user"}, status=status.HTTP_403_FORBIDDEN)
-        user_instance.is_active = False
-        user_instance.save()
-        return Response({"error": "User deleted successfully"}, status=status.HTTP_200_OK)
+            obj = self.get_object(pk, request)
+            serializer = self.serializer(obj, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request: HttpRequest, pk: str | int = None, allowed: bool = False, permission_type: str | None = None) -> Response:
+        if 'delete' not in self.allowed_methods:
+            return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        if not allowed and not self.is_allowed(request):
+            return self.not_allowed_response(permission_type)
+
+        elif not request.user.is_authenticated:
+            return Response({"error": f"You must be logged in to delete a/an{self.model.__name__}"}, status=status.HTTP_403_FORBIDDEN)
+        
+        self.parse_csv_data_in_request(request)
+        
+        is_bulk = isinstance(request.data, list)
+        if is_bulk:
+            instances = []
+            for item in request.data:
+                obj = self.get_object(item.get(self.param_name), request)
+                obj.delete()
+                instances.append({"success": True})
+            return Response(instances, status=status.HTTP_200_OK)
+        else:
+            obj = self.get_object(pk, request)
+            obj.delete()
+            return Response({"success": True}, status=status.HTTP_200_OK)
+class CurrentUserView(APIView):
+
+    def get(self, request: HttpRequest) -> Response:
+        if request.user.is_authenticated:
+            serializer = CurrentCustomUserSerializer(request.user)
+            return Response({"user": serializer.data}, status=status.HTTP_200_OK)
+        return Response({"user": None}, status=status.HTTP_404_NOT_FOUND)
 
 
+class CustomUserView(BaseView):
+    def __init__(self, model=CustomUser, param_name="id", serializer=CustomUserSerializer):
+        super().__init__(model, param_name, serializer)
+
+    def get(self, request: HttpRequest, id: int = None) -> Response:
+        return super().get(request, id)
+
+    def required_fields(self, request: HttpRequest) -> bool | str:
+        if not request.data.get("first_name"):
+            return "First Name field is required"
+        # if not request.data.get("email"):
+        #     return "Email field is required"
+        return False
+
+    def post(self, request: HttpRequest, allowed: bool = False, permission_type: str = None) -> Response:
+        if 'post' not in self.allowed_methods:
+            return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        if not allowed and not self.is_allowed(request):
+            return self.not_allowed_response(permission_type)
+
+        elif not request.user.is_authenticated:
+            return Response({"error": f"You must be logged in to post a/an{self.model.__name__}"}, status=status.HTTP_403_FORBIDDEN)
+        
+        self.parse_csv_data_in_request(request)
+        
+        is_bulk = isinstance(request.data, list)
+        if is_bulk:
+            instances = []
+            errors = []
+            for item in request.data:
+                serializer = self.serializer(data=item)
+                if serializer.is_valid():
+                    instance = serializer.save()
+                    instances.append(serializer.data)
+                else:
+                    errors.append(serializer.errors)
+            if errors:
+                return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(instances, status=status.HTTP_201_CREATED)
+        else:
+            serializer = self.serializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request: HttpRequest, pk: str | int = None, allowed: bool = False, permission_type: str | None = None) -> Response:
+        if 'put' not in self.allowed_methods:
+            return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        if not allowed and not self.is_allowed(request):
+            return self.not_allowed_response(permission_type)
+
+        elif not request.user.is_authenticated:
+            return Response({"error": f"You must be logged in to edit a/an{self.model.__name__}"}, status=status.HTTP_403_FORBIDDEN)
+        
+        self.parse_csv_data_in_request(request)
+        
+        is_bulk = isinstance(request.data, list)
+        if is_bulk:
+            instances = []
+            for item in request.data:
+                obj = self.get_object(item.get(self.param_name), request)
+                serializer = self.serializer(obj, data=item, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    instances.append(serializer.data)
+                else:
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(instances, status=status.HTTP_200_OK)
+        else:
+            obj = self.get_object(pk, request)
+            serializer = self.serializer(obj, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request: HttpRequest, pk: str | int = None, allowed: bool = False, permission_type: str | None = None) -> Response:
+        if 'delete' not in self.allowed_methods:
+            return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        if not allowed and not self.is_allowed(request):
+            return self.not_allowed_response(permission_type)
+
+        elif not request.user.is_authenticated:
+            return Response({"error": f"You must be logged in to delete a/an{self.model.__name__}"}, status=status.HTTP_403_FORBIDDEN)
+        
+        self.parse_csv_data_in_request(request)
+        
+        is_bulk = isinstance(request.data, list)
+        if is_bulk:
+            instances = []
+            for item in request.data:
+                obj = self.get_object(item.get(self.param_name), request)
+                obj.delete()
+                instances.append({"success": True})
+            return Response(instances, status=status.HTTP_200_OK)
+        else:
+            obj = self.get_object(pk, request)
+            obj.delete()
+            return Response({"success": True}, status=status.HTTP_200_OK)
 class CustomUserLogin(APIView):
 
     def post(self, request: HttpRequest) -> Response:
@@ -265,7 +258,7 @@ class CityView(BaseView):
         super().__init__(model, param_name, serializer)
 
     def get(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().get(request, pk,False)
+        return super().get(request, pk, False)
 
     def post(self, request: HttpRequest) -> Response:
         return super().post(request)
@@ -432,6 +425,7 @@ class SearchStudentFilterView(APIView):
         return Response(serialized_data, status=status.HTTP_200_OK)
     
 class StudentsByAttributeView(BaseView):
+
     def __init__(self, model=Student, param_name="attribute", serializer=StudentSerializer, allowed_methods=['get']):
         super().__init__(model, param_name, serializer, allowed_methods)
 
@@ -439,26 +433,32 @@ class StudentsByAttributeView(BaseView):
         return super().get(request, pk, False)
 
 class StudentsByGender(StudentsByAttributeView):
+
     def __init__(self):
         super().__init__(model=Student, param_name="gender", serializer=StudentSerializer)
 
 class StudentsBySex(StudentsByAttributeView):
+
     def __init__(self):
         super().__init__(model=Student, param_name="sex", serializer=StudentSerializer)
 
 class StudentsByColorRace(StudentsByAttributeView):
+
     def __init__(self):
         super().__init__(model=Student, param_name="color_race", serializer=StudentSerializer)
 
 class StudentsByDisability(StudentsByAttributeView):
+
     def __init__(self):
         super().__init__(model=Student, param_name="disability", serializer=StudentSerializer)
 
 class StudentsByMother(StudentsByAttributeView):
+
     def __init__(self):
         super().__init__(model=Student, param_name="mother", serializer=StudentSerializer)
 
 class StudentsByFather(StudentsByAttributeView):
+    
     def __init__(self):
         super().__init__(model=Student, param_name="father", serializer=StudentSerializer)
 
