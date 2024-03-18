@@ -10,27 +10,74 @@ class BulkSerializerMixin:
         if isinstance(validated_data, list):
             return [self.Meta.model.objects.create(**item) for item in validated_data]
         return self.Meta.model.objects.create(**validated_data)
-
 class CitySerializer(BulkSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = City
         fields = '__all__'
 
-
 class AddressSerializer(BulkSerializerMixin, serializers.ModelSerializer):
-    city = CitySerializer()
+    city = serializers.PrimaryKeyRelatedField(queryset=City.objects.all(), pk_field=serializers.CharField())
 
     class Meta:
         model = Address
         fields = '__all__'
 
-
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        city_serializer = CitySerializer(instance.city)
+        representation['city'] = city_serializer.data
+        return representation
+    
 class InstituteSerializer(BulkSerializerMixin, serializers.ModelSerializer):
     address = AddressSerializer()
 
     class Meta:
         model = Institute
         fields = '__all__'
+
+    def create(self, validated_data):
+        address_data = validated_data.pop('address')
+        address = AddressSerializer().create(validated_data=address_data)
+        institute = Institute.objects.create(address=address, **validated_data)
+        return institute
+
+    def update(self, instance, validated_data):
+        address_data = validated_data.pop('address')
+        address_serializer = AddressSerializer(instance.address, data=address_data)
+        if address_serializer.is_valid():
+            address_serializer.save()  # Save the nested address
+        instance.name = validated_data.get('name', instance.name)
+        # Update other fields of Institute if necessary
+        instance.save()
+        return instance
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 class PreviousSchoolSerializer(BulkSerializerMixin, serializers.ModelSerializer):

@@ -40,10 +40,10 @@ class Course(models.Model):
                             null=False)
 
     SHIFT_CHOICES = [
-        ('Manhã', 'Manhã'),
-        ('Tarde', 'Tarde'),
-        ('Noite', 'Noite'),
-        ('Período integral', 'Período integral'),
+        ('Matutino', 'Matutino'),
+        ('Vespertino', 'Vespertino'),
+        ('Noturno', 'Noturno'),
+        ('Integral', 'Integral'),
     ]
     TYPE_CHOICES = [
         ('Educação de Jovens e Adultos (EJA)', 'EJA'),

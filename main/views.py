@@ -304,21 +304,6 @@ class InstituteView(BaseView):
         return super().delete(request, pk)
 
 
-class InstituteView(BaseView):
-    def __init__(self, model=Institute, param_name="name", serializer=InstituteSerializer):
-        super().__init__(model, param_name, serializer)
-
-    def get(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().get(request, pk, False)
-
-    def post(self, request: HttpRequest) -> Response:
-        return super().post(request)
-
-    def put(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().put(request, pk)
-
-    def delete(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().delete(request, pk)
 
 
 class PreviousSchoolView(BaseView):
