@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import CustomUser, City, Address, Institute, PreviousSchool, Course, Student, StudentCourse, Status
-
+import random
 class BulkSerializerMixin:
     def to_internal_value(self, data):
         if isinstance(data, list):
@@ -107,8 +107,32 @@ class StudentSerializer(BulkSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Student
         fields = '__all__'
+    
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        
+        # Dicionários de mapeamento de nomes aleatórios com base no sexo
+        male_names = {
+            'Batman',
+            'Ninja',
+            'Homem Aranha',
+            'Rei Macaco',
+            'Coringa'
+        }
+        female_names = {
+            'Princesa',
+            'Mulan',
+            'Rapunzel',
+            'Ariel'
+        }
 
-
+        # Verifica o sexo e escolhe um nome aleatório
+        if instance.sex == 'Masculino':
+            representation['name'] = random.choice(list(male_names))
+        elif instance.sex == 'Feminino':
+            representation['name'] = random.choice(list(female_names))
+        
+        return representation
 class StudentCourseSerializer(BulkSerializerMixin, serializers.ModelSerializer):
     student = StudentSerializer()
     course = CourseSerializer()

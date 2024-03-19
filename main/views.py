@@ -384,6 +384,7 @@ class StudentView(BaseView):
 
     def get(self, request: HttpRequest, pk: str = None) -> Response:
         return super().get(request, pk, False)
+        
 
     def post(self, request: HttpRequest) -> Response:
         return super().post(request)

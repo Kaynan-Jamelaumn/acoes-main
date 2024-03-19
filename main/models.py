@@ -45,6 +45,11 @@ class Course(models.Model):
         ('Noturno', 'Noturno'),
         ('Integral', 'Integral'),
     ]
+    MODALITY_CHOICES = [
+        ('Presencial', 'Matutino'),
+        ('Híbrido', 'Vespertino'),
+        ('A Distância', 'A Distância'),
+    ]
     TYPE_CHOICES = [
         ('Educação de Jovens e Adultos (EJA)', 'EJA'),
         ('Técnico Integrado', 'Técnico Integrado'),
@@ -54,7 +59,9 @@ class Course(models.Model):
         ('Licenciatura', 'Licenciatura'),
     ]
     shift = models.CharField(
-        max_length=16, choices=SHIFT_CHOICES, null=False, blank=False)
+        max_length=12, choices=SHIFT_CHOICES, null=False, blank=False)
+    modality = models.CharField(
+        max_length=16, choices=MODALITY_CHOICES, null=False, blank=False)
     type = models.CharField(
         max_length=34, choices=TYPE_CHOICES, null=False, blank=False)
     time_required = models.IntegerField()
