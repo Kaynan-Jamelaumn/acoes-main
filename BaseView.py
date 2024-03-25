@@ -7,8 +7,29 @@ from rest_framework.serializers import Serializer
 import csv
 import json
 from rest_framework.parsers import JSONParser
-class BaseView(APIView):
 
+
+from rest_framework.parsers import BaseParser
+
+class CSVParser(BaseParser):
+    """
+    Parses CSV serialized data.
+    """
+
+    media_type = 'text/csv'
+
+    def parse(self, stream, media_type=None, parser_context=None):
+        """
+        Parses the incoming bytestream as CSV and returns the resulting data.
+        """
+        # Decode the stream as a string
+        stream_string = stream.read().decode('utf-8')
+        # Pass the decoded string to csv.DictReader
+        reader = csv.DictReader(stream_string.splitlines())
+        return list(reader)  # Convert CSV data into a list of dictionaries
+
+class BaseView(APIView):
+    parser_classes = (CSVParser, JSONParser)
     def __init__(self, model: Model, param_name: str, serializer: Serializer,  allowed_methods : list[str] = ['get', 'post', 'put', 'delete']):
         self.__model = model
         self.__param_name = param_name
@@ -47,32 +68,6 @@ class BaseView(APIView):
     @allowed_methods.setter
     def allowed_methods(self, value: list[str]):
         self.__allowed_methods = value
-
-    def parse_csv_data(self, request):
-            if request.content_type == 'text/csv':
-                # Read CSV data from request
-                csv_data = request.body.decode('utf-8')
-                # Parse CSV data
-                csv_rows = csv.DictReader(csv_data.splitlines())
-                # Convert CSV data to JSON
-                json_data = json.dumps(list(csv_rows))
-                # Parse JSON data using JSONParser
-                request_data = JSONParser().parse(json.loads(json_data))
-                return request_data
-            else:
-                # If content type is not CSV, use JSONParser
-                return request.data
-    def parse_csv_data_in_request(self, request):
-        if request.content_type == 'text/csv':
-            # Read CSV data from request
-            csv_data = request.body.decode('utf-8')
-            # Parse CSV data
-            csv_rows = csv.DictReader(csv_data.splitlines())
-            # Convert CSV data to JSON
-            json_data = json.dumps(list(csv_rows))
-            # Parse JSON data using JSONParser
-            request.data = JSONParser().parse(json.loads(json_data))
-    
 
     def is_allowed(self, request: HttpRequest):
         return request.user.is_staff
@@ -156,7 +151,6 @@ class BaseView(APIView):
         elif not request.user.is_authenticated:
             return Response({"error": f"You must be logged in to post a/an{self.model.__name__}"}, status=status.HTTP_403_FORBIDDEN)
         
-        self.parse_csv_data_in_request(request)
         is_bulk = isinstance(request.data, list)
 
         serializer = self.serializer(data=request.data, many=is_bulk)
@@ -174,7 +168,6 @@ class BaseView(APIView):
         elif not request.user.is_authenticated:
             return Response({"error": f"You must be logged in to edit a/an {self.model.__name__}"}, status=status.HTTP_403_FORBIDDEN)
         
-        self.parse_csv_data(request)  # Utilize the CSV data parsing here
         is_bulk = isinstance(request.data, list)
 
         if is_bulk:
@@ -216,7 +209,6 @@ class BaseView(APIView):
         elif not request.user.is_authenticated:
             return Response({"error": f"You must be logged in to delete a/an{self.model.__name__}"}, status=status.HTTP_403_FORBIDDEN)
         
-        self.parse_csv_data(request)  # Utilize the CSV data parsing here
         is_bulk = isinstance(request.data, list)
         objs = self.get_object(request=request, pk=pk, many=is_bulk)
         

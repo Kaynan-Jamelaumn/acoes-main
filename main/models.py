@@ -66,6 +66,7 @@ class Course(models.Model):
         max_length=34, choices=TYPE_CHOICES, null=False, blank=False)
     time_required = models.IntegerField()
     institute = models.ForeignKey(Institute, on_delete=models.CASCADE)
+    year_created = models.IntegerField(blank=False, null=False)
 
 
 class CustomUser(AbstractUser):
@@ -95,10 +96,10 @@ class CustomUser(AbstractUser):
 
 
 class Student(models.Model):
-    name = models.CharField(max_length=150)
+    name = models.CharField(max_length=150, blank=True, null=True)
     last_name = models.CharField(max_length=150, blank=True, null=True)
     social_name = models.CharField(max_length=150, null=True, blank=True)
-    mother_name = models.CharField(max_length=150, null=False, blank=False)
+    mother_name = models.CharField(max_length=150, null=True, blank=True)
     father_name = models.CharField(max_length=150, null=True, blank=True)
     birth_date = models.DateField(null=False, blank=False)
     registration = models.IntegerField(null=True, blank=True, unique=True)
@@ -147,7 +148,7 @@ class Student(models.Model):
         max_length=56, choices=DISABILITY_CHOICES, null=True, blank=True)
 
     institute = models.ForeignKey(Institute, on_delete=models.CASCADE)
-    address = models.ForeignKey(Address, on_delete=models.CASCADE)
+    address = models.ForeignKey(Address, on_delete=models.CASCADE, blank=True, null=True)
     previous_school = models.ForeignKey(
         PreviousSchool, on_delete=models.CASCADE)
 
@@ -159,8 +160,8 @@ class Student(models.Model):
 
 
 class StudentCourse(models.Model):
-    name = models.CharField(max_length=250, blank=False,
-                            null=False)
+    name = models.CharField(max_length=250, blank=True,
+                            null=True)
 
     ADMISSION_PROCESS_CHOICES = [
     ('Competição geral', 'Competição geral'),
