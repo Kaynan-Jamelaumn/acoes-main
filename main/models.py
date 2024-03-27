@@ -99,7 +99,7 @@ class Student(models.Model):
     name = models.CharField(max_length=150, blank=True, null=True)
     last_name = models.CharField(max_length=150, blank=True, null=True)
     social_name = models.CharField(max_length=150, null=True, blank=True)
-    mother_name = models.CharField(max_length=150, null=True, blank=True)
+    #mother_name = models.CharField(max_length=150, null=True, blank=True)
     father_name = models.CharField(max_length=150, null=True, blank=True)
     birth_date = models.DateField(null=False, blank=False)
     registration = models.IntegerField(null=True, blank=True, unique=True)
@@ -117,7 +117,6 @@ class Student(models.Model):
     ('Síndrome de Down', 'Síndrome de Down'),
     ('Dislexia', 'Dislexia'),
     ('Transtorno de Déficit de Atenção e Hiperatividade (TDAH)', 'Transtorno de Déficit de Atenção e Hiperatividade (TDAH)'),
-    ('Surdez', 'Surdez'),
     ('Baixa Visão', 'Baixa Visão'),
     ('Surdocegueira', 'Surdocegueira'),
     ('Múltiplas Deficiências', 'Múltiplas Deficiências'),

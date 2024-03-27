@@ -24,6 +24,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api-auth/', include('rest_framework.urls')),
     path('', include('main.urls')),
+    path('', include('students.urls')),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL,

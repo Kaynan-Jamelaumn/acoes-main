@@ -224,3 +224,118 @@ class BaseView(APIView):
         else:
             objs.delete()
             return Response({"success": "Delete operation completed."}, status=status.HTTP_202_ACCEPTED)
+
+
+
+
+
+#new bulk
+
+
+
+def post(self, request: HttpRequest) -> Response:
+    if 'post' not in self.allowed_methods:
+        return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    if not self.is_allowed(request):
+        return self.not_allowed_response("create")
+
+    elif not request.user.is_authenticated:
+        return Response({"error": f"You must be logged in to post a/an{self.model.__name__}"}, status=status.HTTP_403_FORBIDDEN)
+    
+    is_bulk = isinstance(request.data, list)
+
+    if is_bulk:
+        success_data = []
+        error_data = []
+        for item in request.data:
+            serializer = self.serializer(data=item)
+            if serializer.is_valid():
+                serializer.save()
+                success_data.append(serializer.data)
+            else:
+                error_data.append(serializer.errors)
+        if error_data:
+            return Response({"success": success_data, "errors": error_data}, status=status.HTTP_206_PARTIAL_CONTENT)
+        else:
+            return Response({"success": success_data}, status=status.HTTP_201_CREATED)
+    else:
+        serializer = self.serializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+def put(self, request: HttpRequest, pk: str | None = None) -> Response:
+    if 'put' not in self.allowed_methods:
+        return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    if not self.is_allowed(request):
+        return self.not_allowed_response("edit")
+
+    elif not request.user.is_authenticated:
+        return Response({"error": f"You must be logged in to edit a/an {self.model.__name__}"}, status=status.HTTP_403_FORBIDDEN)
+    
+    is_bulk = isinstance(request.data, list)
+
+    if is_bulk:
+        success_data = []
+        error_data = []
+        for item in request.data:
+            if self.__param_name not in item:
+                error_data.append({"error": "'pk' field is required for bulk update"})
+                continue
+            try:
+                obj = self.get_object(request=request, pk=item[self.__param_name])
+                serializer = self.serializer(obj, data=item, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    success_data.append(serializer.data)
+                else:
+                    error_data.append(serializer.errors)
+            except self.model.DoesNotExist:
+                error_data.append({"error": f"{self.model.__name__} with id {item[self.__param_name]} does not exist"})
+        if error_data:
+            return Response({"success": success_data, "errors": error_data}, status=status.HTTP_206_PARTIAL_CONTENT)
+        else:
+            return Response({"success": success_data}, status=status.HTTP_200_OK)
+    else:
+        try:
+            obj = self.get_object(request=request, pk=pk)
+            serializer = self.serializer(obj, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except self.model.DoesNotExist:
+            return Response({"error": f"{self.model.__name__} with id {pk} does not exist"}, status=status.HTTP_404_NOT_FOUND)
+
+def delete(self, request: HttpRequest, pk: str | int = None) -> Response:
+    if 'delete' not in self.allowed_methods:
+        return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    if not self.is_allowed(request):
+        return self.not_allowed_response("delete")
+
+    elif not request.user.is_authenticated:
+        return Response({"error": f"You must be logged in to delete a/an{self.model.__name__}"}, status=status.HTTP_403_FORBIDDEN)
+    
+    is_bulk = isinstance(request.data, list)
+    objs = self.get_object(request=request, pk=pk, many=is_bulk)
+    
+    if isinstance(objs, Response):
+        return objs
+   
+    if not objs:
+        return Response({"error": "one or more objects could not be found" }, status=status.HTTP_400_BAD_REQUEST)
+    if is_bulk:
+        success_data = []
+        error_data = []
+        for obj in objs:
+            obj.delete()
+            success_data.append({"success": f"Deleted {self.model.__name__} with id {obj.pk}"})
+        if error_data:
+            return Response({"success": success_data, "errors": error_data}, status=status.HTTP_206_PARTIAL_CONTENT)
+        else:
+            return Response({"success": success_data}, status=status.HTTP_202_ACCEPTED)
+    else:
+        objs.delete()
+        return Response({"success": f"Deleted {self.model.__name__} with id {pk}"}, status=status.HTTP_202_ACCEPTED)

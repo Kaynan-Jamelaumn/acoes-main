@@ -4,110 +4,247 @@ from rest_framework.response import Response
 import re
 from django.http import HttpRequest
 from django.db.models import Q
-from .serializers import CustomUserSerializer, CustomUserListSerializer, CurrentCustomUserSerializer, CitySerializer, AddressSerializer, InstituteSerializer, PreviousSchoolSerializer, CourseSerializer, StatusSerializer, StudentSerializer, StudentCourseSerializer
+from .serializers import CustomUserSerializer, CustomUserListSerializer, CurrentCustomUserSerializer, CitySerializer, AddressSerializer, InstituteSerializer, PreviousSchoolSerializer, CourseSerializer
 from .models import CustomUser, City, Address, Institute, PreviousSchool, Course, Student, StudentCourse, Status
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.hashers import make_password
+from students.views import *
 
 from .models import CustomUser
 from BaseView import BaseView
 import csv
 import pandas as pd
+class CityView(BaseView):
+    def __init__(self, model=City, param_name="name", serializer=CitySerializer):
+        super().__init__(model, param_name, serializer)
 
-def process_csv(file_path):
-    # Carregar o arquivo CSV em um DataFrame do pandas
-    df = pd.read_csv(file_path)
+    def get(self, request: HttpRequest, pk: str = None) -> Response:
+        return super().get(request, pk, False)
 
-    # Iterar sobre cada linha do DataFrame
-    for index, row in df.iterrows():
-        # Criar um dicionário para armazenar os dados do estudante
-        student_data = {
-            'name': row['nome'],
-            'mother_name': None,  # Como não há campo de nome da mãe, deixamos como None
-            'father_name': row['nome_pai'],  # Usamos o campo 'nome_pai' para 'father_name'
-            'birth_date': row['mes_ano_nascimento'],
-            # Adicione mais campos conforme necessário
+    def post(self, request: HttpRequest) -> Response:
+        return super().post(request)
+
+    def put(self, request: HttpRequest, pk: str = None) -> Response:
+        return super().put(request, pk)
+
+    def delete(self, request: HttpRequest, pk: str = None) -> Response:
+        return super().delete(request, pk)
+
+
+class AddressView(BaseView):
+    def __init__(self, model=Address, param_name="id", serializer=AddressSerializer):
+        super().__init__(model, param_name, serializer)
+
+    def get(self, request: HttpRequest, pk: str = None) -> Response:
+        return super().get(request, pk, False)
+
+    def post(self, request: HttpRequest) -> Response:
+        return super().post(request)
+
+    def put(self, request: HttpRequest, pk: str = None) -> Response:
+        return super().put(request, pk)
+
+    def delete(self, request: HttpRequest, pk: str = None) -> Response:
+        return super().delete(request, pk)
+
+
+class InstituteView(BaseView):
+    def __init__(self, model=Institute, param_name="name", serializer=InstituteSerializer):
+        super().__init__(model, param_name, serializer)
+
+    def get(self, request: HttpRequest, pk: str = None) -> Response:
+        return super().get(request, pk, False)
+
+    def post(self, request: HttpRequest) -> Response:
+        return super().post(request)
+
+    def put(self, request: HttpRequest, pk: str = None) -> Response:
+        return super().put(request, pk)
+
+    def delete(self, request: HttpRequest, pk: str = None) -> Response:
+        return super().delete(request, pk)
+
+
+
+
+class PreviousSchoolView(BaseView):
+    def __init__(self, model=PreviousSchool, param_name="name", serializer=PreviousSchoolSerializer):
+        super().__init__(model, param_name, serializer)
+
+    def get_type_from_name(name):
+        TYPE_MAPPING = {
+            'Educação de Jovens e Adultos (EJA)': ['EJA'],
+            'Técnico Integrado': ['Técnico Integrado'],
+            'Técnico Subsequente': ['Técnico Subsequente'],
+            'Tecnólogo': ['Tecnólogo'],
+            'Bacharelado': ['Bacharelado'],
+            'Licenciatura': ['Licenciatura']
         }
 
-        # Criar o estudante no banco de dados
-        student_view = StudentView()
-        student_response = student_view.post(request=None, data=student_data)
-        if student_response.status_code != 201:
-            print(f"Erro ao adicionar estudante {row['nome']}: {student_response.json()}")
+        for key, value in TYPE_MAPPING.items():
+            for keyword in value:
+                if keyword.lower() in name.lower():
+                    return key
+        return None
+    def get(self, request: HttpRequest, pk: str = None) -> Response:
+        return super().get(request, pk, False)
 
-        # Verificar se o campus existe no banco de dados com base no nome fornecido
-        campus_name = row['campus']
-        try:
-            campus = Institute.objects.get(name=campus_name)
-        except Institute.DoesNotExist:
-            print(f"Campus {campus_name} não encontrado. Ignorando este registro.")
-            continue
+    def post(self, request: HttpRequest) -> Response:
+        return super().post(request)
+    def put(self, request: HttpRequest, pk: str = None) -> Response:
+        return super().put(request, pk)
 
-        # Criar um dicionário para armazenar os dados do curso
-        course_data = {
-            'name': row['Curso'],
-            'shift': row['turno'],
-            'modality': row['modalidade'],
-            'type': None,  # O tipo será definido posteriormente
-            'campus': campus.id,  # Usamos o ID do campus encontrado
-            # Adicione mais campos conforme necessário
-        }
+    def delete(self, request: HttpRequest, pk: str = None) -> Response:
+        return super().delete(request, pk)
 
-        # Verificar se o curso já existe no mesmo campus antes de criar um novo curso
-        existing_course = Course.objects.filter(name=row['Curso'], campus=campus)
-        if existing_course.exists():
-            course_id = existing_course.first().id
-            print(f"Curso {row['Curso']} já existe no campus {campus_name}.")
+
+class CourseView(BaseView):
+    
+    def __init__(self, model=Course, param_name="id", serializer=CourseSerializer):
+        super().__init__(model, param_name, serializer)
+        self.campus_mapping = {
+    "JARAGUÁ RAU": "Instituto Federal de Santa Catarina - Campus Jaraguá do Sul - Rau",
+}
+
+    def get(self, request: HttpRequest, pk: str = None) -> Response:
+        return super().get(request, pk, False)
+
+    def post(self, request: HttpRequest) -> Response:
+        if 'post' not in self.allowed_methods:
+            return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        
+        if not request.user.is_authenticated:
+            return Response({"error": f"You must be logged in to post a/an {self.model.__name__}"}, status=status.HTTP_403_FORBIDDEN)
+        
+        # Check if the data is a list or a single dictionary
+        if isinstance(request.data, list):
+            items = request.data
+        elif isinstance(request.data, dict):
+            # If it's a single JSON object, wrap it in a list
+            items = [request.data]
         else:
-            # Criar o curso no banco de dados
-            course_view = CourseView()
-            course_response = course_view.post(request=None, data=course_data)
-            if course_response.status_code != 201:
-                print(f"Erro ao adicionar curso {row['Curso']}: {course_response.json()}")
-                continue
-            course_id = course_response.json()['id']
+            return Response({"error": "Expected a list or a single item"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        processed_data = set()
 
-        # Definir o tipo do curso com base no nome do curso
-        type_from_name = PreviousSchoolView.get_type_from_name(row['Curso'])
-        if type_from_name is None:
-            print(f"Tipo do curso não pôde ser identificado para {row['Curso']}")
-            continue
+        for row in items:
+            try:
+                year_created = row.get('ano_ingresso')
+                course = row.get('Curso')
+                campus = row.get('campus')
+                modality = row.get('modalidade')
+                shift = row.get('turno')
+                time_required = row.get('Tempo_min_Integralizacao_Curso')
+                course_type = row.get('Tipo de Curso')
 
-        # Atualizar o tipo do curso e salvar no banco de dados
-        course_data['type'] = type_from_name
-        course_response = course_view.put(request=None, pk=course_id, data=course_data)
-        if course_response.status_code != 200:
-            print(f"Erro ao atualizar tipo do curso {row['Curso']}: {course_response.json()}")
+                if not all([year_created, course, campus, modality, shift, time_required, course_type]):
+                    # Skip rows with missing fields
+                    continue
 
-        # Criar um dicionário para armazenar os dados do status
-        status_data = {
-            'status': row['Status'],
-            'current_semester': row['semestre_ingresso'],
-            # Adicione mais campos conforme necessário
-        }
+                # Check if the row already exists in the processed data
+                if (year_created, course, campus, modality, shift, time_required, course_type) not in processed_data:
+                    processed_data.add((year_created, course, campus, modality, shift, time_required, course_type))
+                    print(campus)
+                    # Find the institute by campus name
+                    if campus in self.campus_mapping:
+                        campus = self.campus_mapping[campus]
+                    campus_regex = r'\b{}\b'.format(re.escape(campus.lower()))
 
-        # Criar o status no banco de dados
-        status_view = StatusView()
-        status_response = status_view.post(request=None, data=status_data)
-        if status_response.status_code != 201:
-            print(f"Erro ao adicionar status para {row['nome']}: {status_response.json()}")
+                    # Filter the Institute using the regular expression
+                    institute = Institute.objects.filter(name__iregex=campus_regex).first()
+                    
+                    if institute is None:
+                        return Response({'error': f"No institute found for campus '{campus}'"}, status=status.HTTP_404_NOT_FOUND)
+                    
+                    # Check if the course type is present
+                    if not course_type:
+                        course_type = self.get_type_from_name(course)
+                        if not course_type:
+                            return Response({"error": "Type could not be parsed"}, status=status.HTTP_400_BAD_REQUEST)
+                        
+                    # Create or update the object in the database
+                    Course.objects.update_or_create(
+                        year_created=year_created,
+                        name=course,
+                        institute=institute,
+                        modality=modality,
+                        shift=shift,
+                        type=course_type,
+                        time_required=time_required
+                    )
+            except Exception as e:
+                return Response({'error': 'Error while processing row: {}'.format(str(e))}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Criar uma entrada para o estudante no curso e salvar no banco de dados
-        student_course_data = {
-            'name': row['Curso'],
-            'admission_process': row['Cota'],
-            'ingressed_semester': row['semestre_ingresso'],
-            'course': course_id,
-            'student': student_response.json()['id'],
-            'status': status_response.json()['id'],  # Referenciar o status criado
-            # Adicione mais campos conforme necessário
-        }
+        return Response({'success': 'Data processed successfully!'}, status=status.HTTP_200_OK)
 
-        student_course_view = StudentCourseView()
-        student_course_response = student_course_view.post(request=None, data=student_course_data)
-        if student_course_response.status_code != 201:
-            print(f"Erro ao adicionar estudante ao curso {row['Curso']}: {student_course_response.json()}")
+
+
+       # else:
+        #     data = request.data 
+        #     if data['type'] != None:
+        #         return super().post(request)
+        #     else:
+        #         name = data['name']
+        #         type_from_name = self.get_type_from_name(name)
+        #         if type_from_name == None:
+        #             return Response({"error": "Type could not be parsed"}, status=status.HTTP_403_FORBIDDEN)
+        
+        #         data['type'] = type_from_name
+        #         request.data = data
+        #         return super().post(request)
+
+
+    def put(self, request: HttpRequest, pk: str = None) -> Response:
+        data = request.data 
+        if data['type'] != None:
+            return super().put(request)
+        else:
+            name = data['name']
+            type_from_name = self.get_type_from_name(name)
+            if type_from_name == None:
+                return Response({"error": "Type could not be parsed"}, status=status.HTTP_403_FORBIDDEN)
+    
+            data['type'] = type_from_name
+            request.data = data
+            return super().put(request)
+
+
+    def delete(self, request: HttpRequest, pk: str = None) -> Response:
+        return super().delete(request, pk)
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -144,7 +281,6 @@ class CustomUserView(BaseView):
         elif not request.user.is_authenticated:
             return Response({"error": f"You must be logged in to post a/an{self.model.__name__}"}, status=status.HTTP_403_FORBIDDEN)
         
-        self.parse_csv_data_in_request(request)
         
         is_bulk = isinstance(request.data, list)
         if is_bulk:
@@ -353,400 +489,98 @@ class CustomUserLogout(APIView):
         return Response({"success": True}, status=status.HTTP_200_OK)
 
 
-class CityView(BaseView):
-    def __init__(self, model=City, param_name="name", serializer=CitySerializer):
-        super().__init__(model, param_name, serializer)
+def process_csv(file_path):
+    # Carregar o arquivo CSV em um DataFrame do pandas
+    df = pd.read_csv(file_path)
 
-    def get(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().get(request, pk, False)
-
-    def post(self, request: HttpRequest) -> Response:
-        return super().post(request)
-
-    def put(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().put(request, pk)
-
-    def delete(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().delete(request, pk)
-
-
-class AddressView(BaseView):
-    def __init__(self, model=Address, param_name="id", serializer=AddressSerializer):
-        super().__init__(model, param_name, serializer)
-
-    def get(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().get(request, pk, False)
-
-    def post(self, request: HttpRequest) -> Response:
-        return super().post(request)
-
-    def put(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().put(request, pk)
-
-    def delete(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().delete(request, pk)
-
-
-class InstituteView(BaseView):
-    def __init__(self, model=Institute, param_name="name", serializer=InstituteSerializer):
-        super().__init__(model, param_name, serializer)
-
-    def get(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().get(request, pk, False)
-
-    def post(self, request: HttpRequest) -> Response:
-        return super().post(request)
-
-    def put(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().put(request, pk)
-
-    def delete(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().delete(request, pk)
-
-
-
-
-class PreviousSchoolView(BaseView):
-    def __init__(self, model=PreviousSchool, param_name="name", serializer=PreviousSchoolSerializer):
-        super().__init__(model, param_name, serializer)
-
-    def get_type_from_name(name):
-        TYPE_MAPPING = {
-            'Educação de Jovens e Adultos (EJA)': ['EJA'],
-            'Técnico Integrado': ['Técnico Integrado'],
-            'Técnico Subsequente': ['Técnico Subsequente'],
-            'Tecnólogo': ['Tecnólogo'],
-            'Bacharelado': ['Bacharelado'],
-            'Licenciatura': ['Licenciatura']
+    # Iterar sobre cada linha do DataFrame
+    for index, row in df.iterrows():
+        # Criar um dicionário para armazenar os dados do estudante
+        student_data = {
+            'name': row['nome'],
+            'mother_name': None,  # Como não há campo de nome da mãe, deixamos como None
+            'father_name': row['nome_pai'],  # Usamos o campo 'nome_pai' para 'father_name'
+            'birth_date': row['mes_ano_nascimento'],
+            # Adicione mais campos conforme necessário
         }
 
-        for key, value in TYPE_MAPPING.items():
-            for keyword in value:
-                if keyword.lower() in name.lower():
-                    return key
-        return None
-    def get(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().get(request, pk, False)
+        # Criar o estudante no banco de dados
+        student_view = StudentView()
+        student_response = student_view.post(request=None, data=student_data)
+        if student_response.status_code != 201:
+            print(f"Erro ao adicionar estudante {row['nome']}: {student_response.json()}")
 
-    def post(self, request: HttpRequest) -> Response:
-        return super().post(request)
-    def put(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().put(request, pk)
+        # Verificar se o campus existe no banco de dados com base no nome fornecido
+        campus_name = row['campus']
+        try:
+            campus = Institute.objects.get(name=campus_name)
+        except Institute.DoesNotExist:
+            print(f"Campus {campus_name} não encontrado. Ignorando este registro.")
+            continue
 
-    def delete(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().delete(request, pk)
-
-
-class CourseView(BaseView):
-    
-    def __init__(self, model=Course, param_name="id", serializer=CourseSerializer):
-        super().__init__(model, param_name, serializer)
-        self.campus_mapping = {
-    "JARAGUÁ RAU": "Instituto Federal de Santa Catarina - Campus Jaraguá do Sul - Rau",
-}
-
-    def get(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().get(request, pk, False)
-
-    def post(self, request: HttpRequest) -> Response:
-        if 'post' not in self.allowed_methods:
-            return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        
-        if not request.user.is_authenticated:
-            return Response({"error": f"You must be logged in to post a/an {self.model.__name__}"}, status=status.HTTP_403_FORBIDDEN)
-        
-        # Check if the data is a list or a single dictionary
-        if isinstance(request.data, list):
-            items = request.data
-        elif isinstance(request.data, dict):
-            # If it's a single JSON object, wrap it in a list
-            items = [request.data]
-        else:
-            return Response({"error": "Expected a list or a single item"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        processed_data = set()
-
-        for row in items:
-            try:
-                year_created = row.get('ano_ingresso')
-                course = row.get('Curso')
-                campus = row.get('campus')
-                modality = row.get('modalidade')
-                shift = row.get('turno')
-                time_required = row.get('Tempo_min_Integralizacao_Curso')
-                course_type = row.get('Tipo de Curso')
-
-                if not all([year_created, course, campus, modality, shift, time_required, course_type]):
-                    # Skip rows with missing fields
-                    continue
-
-                # Check if the row already exists in the processed data
-                if (year_created, course, campus, modality, shift, time_required, course_type) not in processed_data:
-                    processed_data.add((year_created, course, campus, modality, shift, time_required, course_type))
-                    print(campus)
-                    # Find the institute by campus name
-                    if campus in self.campus_mapping:
-                        campus = self.campus_mapping[campus]
-                    campus_regex = r'\b{}\b'.format(re.escape(campus.lower()))
-
-                    # Filter the Institute using the regular expression
-                    institute = Institute.objects.filter(name__iregex=campus_regex).first()
-                    
-                    if institute is None:
-                        return Response({'error': f"No institute found for campus '{campus}'"}, status=status.HTTP_404_NOT_FOUND)
-                    
-                    # Check if the course type is present
-                    if not course_type:
-                        course_type = self.get_type_from_name(course)
-                        if not course_type:
-                            return Response({"error": "Type could not be parsed"}, status=status.HTTP_400_BAD_REQUEST)
-                        
-                    # Create or update the object in the database
-                    Course.objects.update_or_create(
-                        year_created=year_created,
-                        name=course,
-                        institute=institute,
-                        modality=modality,
-                        shift=shift,
-                        type=course_type,
-                        time_required=time_required
-                    )
-            except Exception as e:
-                return Response({'error': 'Error while processing row: {}'.format(str(e))}, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response({'success': 'Data processed successfully!'}, status=status.HTTP_200_OK)
-
-
-
-       # else:
-        #     data = request.data 
-        #     if data['type'] != None:
-        #         return super().post(request)
-        #     else:
-        #         name = data['name']
-        #         type_from_name = self.get_type_from_name(name)
-        #         if type_from_name == None:
-        #             return Response({"error": "Type could not be parsed"}, status=status.HTTP_403_FORBIDDEN)
-        
-        #         data['type'] = type_from_name
-        #         request.data = data
-        #         return super().post(request)
-
-
-    def put(self, request: HttpRequest, pk: str = None) -> Response:
-        data = request.data 
-        if data['type'] != None:
-            return super().put(request)
-        else:
-            name = data['name']
-            type_from_name = self.get_type_from_name(name)
-            if type_from_name == None:
-                return Response({"error": "Type could not be parsed"}, status=status.HTTP_403_FORBIDDEN)
-    
-            data['type'] = type_from_name
-            request.data = data
-            return super().put(request)
-
-
-    def delete(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().delete(request, pk)
-
-
-class StudentView(BaseView):
-    def __init__(self, model=Student, param_name="id", serializer=StudentSerializer):
-        super().__init__(model, param_name, serializer)
-
-    def get(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().get(request, pk, False)
-        
-
-    def post(self, request: HttpRequest) -> Response:
-        if 'post' not in self.allowed_methods:
-            return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        if not self.is_allowed(request):
-            return self.not_allowed_response("You can not Post")
-
-        elif not request.user.is_authenticated:
-            return Response({"error": f"You must be logged in to post a/an{self.model.__name__}"}, status=status.HTTP_403_FORBIDDEN)
-        
-        # Check if 'name' is provided in the request data
-        if 'name' in request.data:
-          
-            if ('father_name' in request.data):
-                students_with_same_details = self.model.objects.filter(name=request.data['name'], mother_name=request.data['mother_name'], father_name=request.data['father_name'], birth_date=request.data['birth_date'])
-            else:
-                students_with_same_details = self.model.objects.filter(name=request.data['name'], mother_name=request.data['mother_name'], birth_date=request.data['birth_date'])
-            # If there are students with the same name, don't add
-            if students_with_same_details.exists():
-                return Response({"error": "Student with the same name already exists"}, status=status.HTTP_400_BAD_REQUEST)
-        elif ('father_name' in request.data):
-            students_with_same_details = self.model.objects.filter( mother_name=request.data['mother_name'], father_name=request.data['father_name'], birth_date=request.data['birth_date'])
-            if students_with_same_details.exists():
-                return Response({"error": "Student with the same name already exists"}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            # Retrieve students with the same mother's name and birth_date
-            students_with_same_details = self.model.objects.filter(
-                mother_name=request.data['mother_name'],
-                birth_date=request.data['birth_date']
-            )
-            # If there are students with the same mother's name and birth_date, don't add
-            if students_with_same_details.exists():
-                return Response({"error": "Student with the same mother's name and birth_date already exists"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Check if 'father_name' is provided in the request data
-        is_bulk = isinstance(request.data, list)
-        serializer = self.serializer(data=request.data, many=is_bulk)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    def put(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().put(request, pk)
-
-    def delete(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().delete(request, pk)
-
-
-class SearchStudentFilterView(APIView):
-
-    def get(self, request: HttpRequest) -> Response:
-        search_query = request.query_params.get('search', '')
-        studant = Student.objects.filter(
-            Q(first_name__icontains=search_query) | Q(last_name__icontains=search_query | Q(social_name__icontains = search_query | Q(registration__icontains = search_query))) )
-
-        studants_serializer = StudentSerializer(studant, many=True)
-
-        serialized_data = {
-            'student': studants_serializer.data,
+        # Criar um dicionário para armazenar os dados do curso
+        course_data = {
+            'name': row['Curso'],
+            'shift': row['turno'],
+            'modality': row['modalidade'],
+            'type': None,  # O tipo será definido posteriormente
+            'campus': campus.id,  # Usamos o ID do campus encontrado
+            # Adicione mais campos conforme necessário
         }
-        return Response(serialized_data, status=status.HTTP_200_OK)
-    
-class StudentsByAttributeView(BaseView):
 
-    def __init__(self, model=Student, param_name="attribute", serializer=StudentSerializer, allowed_methods=['get']):
-        super().__init__(model, param_name, serializer, allowed_methods)
+        # Verificar se o curso já existe no mesmo campus antes de criar um novo curso
+        existing_course = Course.objects.filter(name=row['Curso'], campus=campus)
+        if existing_course.exists():
+            course_id = existing_course.first().id
+            print(f"Curso {row['Curso']} já existe no campus {campus_name}.")
+        else:
+            # Criar o curso no banco de dados
+            course_view = CourseView()
+            course_response = course_view.post(request=None, data=course_data)
+            if course_response.status_code != 201:
+                print(f"Erro ao adicionar curso {row['Curso']}: {course_response.json()}")
+                continue
+            course_id = course_response.json()['id']
 
-    def get(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().get(request, pk, False)
+        # Definir o tipo do curso com base no nome do curso
+        type_from_name = PreviousSchoolView.get_type_from_name(row['Curso'])
+        if type_from_name is None:
+            print(f"Tipo do curso não pôde ser identificado para {row['Curso']}")
+            continue
 
-class StudentsByGender(StudentsByAttributeView):
+        # Atualizar o tipo do curso e salvar no banco de dados
+        course_data['type'] = type_from_name
+        course_response = course_view.put(request=None, pk=course_id, data=course_data)
+        if course_response.status_code != 200:
+            print(f"Erro ao atualizar tipo do curso {row['Curso']}: {course_response.json()}")
 
-    def __init__(self):
-        super().__init__(model=Student, param_name="gender", serializer=StudentSerializer)
+        # Criar um dicionário para armazenar os dados do status
+        status_data = {
+            'status': row['Status'],
+            'current_semester': row['semestre_ingresso'],
+            # Adicione mais campos conforme necessário
+        }
 
-class StudentsBySex(StudentsByAttributeView):
+        # Criar o status no banco de dados
+        status_view = StatusView()
+        status_response = status_view.post(request=None, data=status_data)
+        if status_response.status_code != 201:
+            print(f"Erro ao adicionar status para {row['nome']}: {status_response.json()}")
 
-    def __init__(self):
-        super().__init__(model=Student, param_name="sex", serializer=StudentSerializer)
+        # Criar uma entrada para o estudante no curso e salvar no banco de dados
+        student_course_data = {
+            'name': row['Curso'],
+            'admission_process': row['Cota'],
+            'ingressed_semester': row['semestre_ingresso'],
+            'course': course_id,
+            'student': student_response.json()['id'],
+            'status': status_response.json()['id'],  # Referenciar o status criado
+            # Adicione mais campos conforme necessário
+        }
 
-class StudentsByColorRace(StudentsByAttributeView):
+        student_course_view = StudentCourseView()
+        student_course_response = student_course_view.post(request=None, data=student_course_data)
+        if student_course_response.status_code != 201:
+            print(f"Erro ao adicionar estudante ao curso {row['Curso']}: {student_course_response.json()}")
 
-    def __init__(self):
-        super().__init__(model=Student, param_name="color_race", serializer=StudentSerializer)
-
-class StudentsByDisability(StudentsByAttributeView):
-
-    def __init__(self):
-        super().__init__(model=Student, param_name="disability", serializer=StudentSerializer)
-
-class StudentsByMother(StudentsByAttributeView):
-
-    def __init__(self):
-        super().__init__(model=Student, param_name="mother", serializer=StudentSerializer)
-
-class StudentsByFather(StudentsByAttributeView):
-    
-    def __init__(self):
-        super().__init__(model=Student, param_name="father", serializer=StudentSerializer)
-
-
-class StudentsByCity(APIView):
-
-    def get(self, request: HttpRequest, city: str = None, id: int = None) -> Response:
-        if not int:
-            int = request.data.get('int')
-        if not city:
-            city = request.data.get('city')
-        object = Student.objects.filter(int=int, address__city=city)
-        if object:
-            serializer = StudentSerializer(object, many=True)
-            return Response({"students": serializer.data}, status=status.HTTP_200_OK)
-        return Response({"students": None}, status=status.HTTP_200_OK)
-
-
-class StudentsByInstitute(APIView):
-
-    def get(self, request: HttpRequest, institute: str = None, id: int = None) -> Response:
-        if not id:
-            id = request.data.get('id')
-        if not institute:
-            institute = request.data.get('institute')
-        object = Student.objects.filter(id=id, institute=institute)
-        if object:
-            serializer = StudentSerializer(object, many=True)
-            return Response({"students": serializer.data}, status=status.HTTP_200_OK)
-        return Response({"students": None}, status=status.HTTP_200_OK)
-
-
-class StudentsByPreviousSchool(APIView):
-
-    def get(self, request: HttpRequest, previous_school: str = None, id: int = None) -> Response:
-        if not id:
-            id = request.data.get('id')
-        if not previous_school:
-            previous_school = request.data.get('previous_school')
-        object = Student.objects.filter(id=id, previous_school=previous_school)
-        if object:
-            serializer = StudentSerializer(object, many=True)
-            return Response({"students": serializer.data}, status=status.HTTP_200_OK)
-        return Response({"students": None}, status=status.HTTP_200_OK)
-
-
-class StudentsByCourse(APIView):
-
-    def get(self, request: HttpRequest, course: int = None, id: int = None) -> Response:
-        if not id:
-            id = request.data.get('id')
-        if not course:
-            course = request.data.get('course')
-        object = StudentCourse.objects.filter(id=id, course=course)
-        if object:
-            serializer = StudentCourseSerializer(object, many=True)
-            return Response({"students": serializer.data}, status=status.HTTP_200_OK)
-        return Response({"students": None}, status=status.HTTP_200_OK)
-
-
-class StudentCourseView(BaseView):
-    def __init__(self, model=StudentCourse, param_name="id", serializer=StudentCourse):
-        super().__init__(model, param_name, serializer)
-
-    def get(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().get(request, pk, False)
-
-    def post(self, request: HttpRequest) -> Response:
-        return super().post(request)
-
-    def put(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().put(request, pk)
-
-    def delete(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().delete(request, pk)
-
-class StatusView(BaseView):
-    def __init__(self, model=Status, param_name="id", serializer=StatusSerializer):
-        super().__init__(model, param_name, serializer)
-
-    def get(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().get(request, pk, False)
-
-    def post(self, request: HttpRequest) -> Response:
-        return super().post(request)
-
-    def put(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().put(request, pk)
-
-    def delete(self, request: HttpRequest, pk: str = None) -> Response:
-        return super().delete(request, pk)
 

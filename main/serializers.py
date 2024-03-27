@@ -93,56 +93,6 @@ class CourseSerializer(BulkSerializerMixin, serializers.ModelSerializer):
         model = Course
         fields = '__all__'
 
-
-class StatusSerializer(BulkSerializerMixin, serializers.ModelSerializer):
-    class Meta:
-        model = Status
-        fields = '__all__'
-
-
-class StudentSerializer(BulkSerializerMixin, serializers.ModelSerializer):
-    institute = InstituteSerializer()
-    previous_school = PreviousSchoolSerializer()
-
-    class Meta:
-        model = Student
-        fields = '__all__'
-    
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        
-        # Dicionários de mapeamento de nomes aleatórios com base no sexo
-        male_names = {
-            'Batman',
-            'Ninja',
-            'Homem Aranha',
-            'Rei Macaco',
-            'Coringa'
-        }
-        female_names = {
-            'Princesa',
-            'Mulan',
-            'Rapunzel',
-            'Ariel'
-        }
-
-        # Verifica o sexo e escolhe um nome aleatório
-        if instance.sex == 'Masculino':
-            representation['name'] = random.choice(list(male_names))
-        elif instance.sex == 'Feminino':
-            representation['name'] = random.choice(list(female_names))
-        
-        return representation
-class StudentCourseSerializer(BulkSerializerMixin, serializers.ModelSerializer):
-    student = StudentSerializer()
-    course = CourseSerializer()
-    status = StatusSerializer()
-
-    class Meta:
-        model = StudentCourse
-        fields = '__all__'
-
-
 class CustomUserSerializer(BulkSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = CustomUser
