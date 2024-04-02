@@ -7,6 +7,7 @@ from .views import (
     CityView,
     AddressView,
     InstituteView,
+    InstitutePageView,
     PreviousSchoolView,
     CourseView,
 )
@@ -26,6 +27,8 @@ urlpatterns = [
 
     path('institute/', InstituteView.as_view(), name='institute-list'),
     path('institute/<str:pk>/', InstituteView.as_view(), name='institute-detail'),
+    path('institute-page/', InstitutePageView.as_view(), name='institute-page-list'),
+    path('institute-page/<int:page>/', InstitutePageView.as_view(), name='institute-page'),
 
     path('previous-school/', PreviousSchoolView.as_view(),
          name='previous-school-list'),

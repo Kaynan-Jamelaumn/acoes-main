@@ -23,7 +23,7 @@ class StatusSerializer(BulkSerializerMixin, serializers.ModelSerializer):
 
 class StudentSerializer(BulkSerializerMixin, serializers.ModelSerializer):
     institute = InstituteSerializer()
-    previous_school = PreviousSchoolSerializer()
+   # previous_school = PreviousSchoolSerializer()
 
     class Meta:
         model = Student

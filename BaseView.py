@@ -7,10 +7,13 @@ from rest_framework.serializers import Serializer
 import csv
 import json
 from rest_framework.parsers import JSONParser
-
+from rest_framework.pagination import PageNumberPagination
 
 from rest_framework.parsers import BaseParser
-
+class CustomPageNumberPagination(PageNumberPagination):
+    page_size = 10  # Set the number of items per page
+    page_size_query_param = 'page_size'
+    max_page_size = 1000
 class CSVParser(BaseParser):
     """
     Parses CSV serialized data.
@@ -30,6 +33,7 @@ class CSVParser(BaseParser):
 
 class BaseView(APIView):
     parser_classes = (CSVParser, JSONParser)
+    pagination_class = CustomPageNumberPagination 
     def __init__(self, model: Model, param_name: str, serializer: Serializer,  allowed_methods : list[str] = ['get', 'post', 'put', 'delete']):
         self.__model = model
         self.__param_name = param_name
@@ -81,18 +85,18 @@ class BaseView(APIView):
         if not obj:
             return Response({"error": f"{self.model.__name__} not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    def to_retrieve(self, request: Model = None, pk: str | int = None, many: bool = False):
+    def to_retrieve(self, request: HttpRequest = None, pk: str | int = None, many: bool = False, page: int = False):
 
-        if pk:
+        if pk != None:
             if many == True:
-                obj = self.get_object(pk=pk, many=True)
+                obj = self.get_object(request, pk=pk, many=True)
                 self.check_obj(obj)
                 serializer = self.serializer(obj,  many=True)
             else:
-                obj = self.get_object(pk)
+                obj = self.get_object(request, pk)
                 self.check_obj(obj)
                 serializer = self.serializer(obj)
-        elif request.data.get(self.param_name):
+        elif request.data.get(self.param_name) and page == 0:
             if many == True:
                 obj = self.get_object(request, many=True)
                 self.check_obj(obj)
@@ -103,6 +107,14 @@ class BaseView(APIView):
                 serializer = self.__serializer(obj)
 
         else:
+            # Pagination of all objects if no specific filter or primary key provided
+            if page !=0:
+                queryset = self.model.objects.all()
+                paginator = self.pagination_class()
+                paginated_queryset = paginator.paginate_queryset(queryset, request)
+                serializer = self.serializer(paginated_queryset, many=True)
+                serializer.is_valid()
+                return paginator.get_paginated_response(serializer.data)
             serializer = self.__serializer(
                 data=self.model.objects.all(), many=True)
             serializer.is_valid()
@@ -125,7 +137,7 @@ class BaseView(APIView):
                 else:
                     raise ValueError("No valid identifier provided for bulk operation")
         else:
-            if pk:
+            if pk !=None:
                 return self.model.objects.get(**{self.param_name: pk})
             else:
                 value = request.data.get(self.param_name)
@@ -133,13 +145,13 @@ class BaseView(APIView):
                     return self.model.objects.get(**{self.param_name: value})
                 else:
                     raise ValueError(f"{self.model.name} not found")
-    def get(self, request: HttpRequest, pk: str | int = None, allowed: bool = True, permission_type: str = None) -> Response:
+    def get(self, request: HttpRequest, pk: str | int = None, allowed: bool = True, permission_type: str = None, page: int = 0) -> Response:
         if 'get' not in self.allowed_methods:
             return Response({"error": "Method not allowed"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
         if not allowed and not self.is_allowed(request): # eu n lembro o q siginificava isso aqui é se allowed == false ?
             return self.not_allowed_response(permission_type)
         else:
-            serializer = self.to_retrieve(request, pk)
+            serializer = self.to_retrieve(request=request, pk=pk, page=page)
             return Response(serializer.data,  status=status.HTTP_200_OK)
 
     def post(self, request: HttpRequest, allowed: bool = False, permission_type: str = None) -> Response:

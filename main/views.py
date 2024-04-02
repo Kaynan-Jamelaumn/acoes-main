@@ -65,8 +65,12 @@ class InstituteView(BaseView):
     def delete(self, request: HttpRequest, pk: str = None) -> Response:
         return super().delete(request, pk)
 
+class InstitutePageView(BaseView):
+    def __init__(self, model=Institute, param_name="name", serializer=InstituteSerializer):
+        super().__init__(model, param_name, serializer)
 
-
+    def get(self, request: HttpRequest, page: int = 0) -> Response:
+        return super().get(request, None , False, page)
 
 class PreviousSchoolView(BaseView):
     def __init__(self, model=PreviousSchool, param_name="name", serializer=PreviousSchoolSerializer):
@@ -79,7 +83,14 @@ class PreviousSchoolView(BaseView):
             'Técnico Subsequente': ['Técnico Subsequente'],
             'Tecnólogo': ['Tecnólogo'],
             'Bacharelado': ['Bacharelado'],
-            'Licenciatura': ['Licenciatura']
+            'Licenciatura': ['Licenciatura'],
+            'PRIVADA' : ['Privada'],
+            'ESTADUAL' : ['Estadual'],
+            'MUNICIPAL' : ['Municipal'],
+            'COMUNITÁRIA' : ['Comunitiária'],
+            'FEDERAL' : ['Federal'],
+            'OUTRA' : ['Outra'],
+
         }
 
         for key, value in TYPE_MAPPING.items():
@@ -106,6 +117,29 @@ class CourseView(BaseView):
         self.campus_mapping = {
     "JARAGUÁ RAU": "Instituto Federal de Santa Catarina - Campus Jaraguá do Sul - Rau",
 }
+
+    def get_type_from_name(name):
+        TYPE_MAPPING = {
+            'Educação de Jovens e Adultos (EJA)': ['EJA'],
+            'Técnico Integrado': ['Técnico Integrado'],
+            'Técnico Subsequente': ['Técnico Subsequente'],
+            'Tecnólogo': ['Tecnólogo'],
+            'Bacharelado': ['Bacharelado'],
+            'Licenciatura': ['Licenciatura'],
+            # 'PRIVADA' : ['Privada'],
+            # 'ESTADUAL' : ['Estadual'],
+            # 'MUNICIPAL' : ['Municipal'],
+            # 'COMUNITÁRIA' : ['Comunitiária'],
+            # 'FEDERAL' : ['Federal'],
+            # 'OUTRA' : ['Outra'],
+
+        }
+
+        for key, value in TYPE_MAPPING.items():
+            for keyword in value:
+                if keyword.lower() in name.lower():
+                    return key
+        return None
 
     def get(self, request: HttpRequest, pk: str = None) -> Response:
         return super().get(request, pk, False)
@@ -145,7 +179,6 @@ class CourseView(BaseView):
                 # Check if the row already exists in the processed data
                 if (year_created, course, campus, modality, shift, time_required, course_type) not in processed_data:
                     processed_data.add((year_created, course, campus, modality, shift, time_required, course_type))
-                    print(campus)
                     # Find the institute by campus name
                     if campus in self.campus_mapping:
                         campus = self.campus_mapping[campus]

@@ -5,8 +5,6 @@ from django.db import models
 class City(models.Model):
     name = models.CharField(max_length=150, blank=False,
                             null=False,  primary_key=True, unique=True)
-    region = models.CharField(max_length=150, blank=False, null=False)
-
 
 class Address(models.Model):
     address = models.CharField(max_length=250, blank=False, null=False)
@@ -20,24 +18,27 @@ class Institute(models.Model):
     name = models.CharField(max_length=250, blank=False,
                             null=False, primary_key=True, unique=True)
     address = models.ForeignKey(Address, on_delete=models.CASCADE)
+    region = models.CharField(max_length=150, blank=False, null=False)
 
 
 class PreviousSchool(models.Model):
-    name = models.CharField(max_length=250, blank=False,
-                            null=False, primary_key=True)
-    completion_date = models.DateField()
+    name = models.CharField(max_length=250, blank=True,null=True)
+    completion_date = models.DateField(blank=True, null=True)
     TYPE_CHOICES = [
-        ('Private', 'Private'),
-        ('Public', 'Public'),
+        ('Comunitária', 'Comunitária'),
+        ('Municipal', 'Municipal'),
+        ('Estadual', 'Estadual'),
+        ('Federal', 'Federal'),
+        ('Privada', 'Privada'),
+        ('Outra', 'Outra'),
     ]
     type = models.CharField(
-        max_length=10, choices=TYPE_CHOICES, null=False, blank=False)
-    address = models.ForeignKey(Address, on_delete=models.CASCADE)
+        max_length=11, choices=TYPE_CHOICES, null=False, blank=False)
+    address = models.ForeignKey(Address, on_delete=models.CASCADE, blank=True, null=True)
 
 
 class Course(models.Model):
-    name = models.CharField(max_length=250, blank=False,
-                            null=False)
+    name = models.CharField(max_length=250, blank=False, null=False)
 
     SHIFT_CHOICES = [
         ('Matutino', 'Matutino'),
@@ -46,8 +47,8 @@ class Course(models.Model):
         ('Integral', 'Integral'),
     ]
     MODALITY_CHOICES = [
-        ('Presencial', 'Matutino'),
-        ('Híbrido', 'Vespertino'),
+        ('Presencial', 'Presencial'),
+        ('Híbrido', 'Híbrido'),
         ('A Distância', 'A Distância'),
     ]
     TYPE_CHOICES = [
@@ -67,6 +68,7 @@ class Course(models.Model):
     time_required = models.IntegerField()
     institute = models.ForeignKey(Institute, on_delete=models.CASCADE)
     year_created = models.IntegerField(blank=False, null=False)
+
 
 
 class CustomUser(AbstractUser):
@@ -134,6 +136,7 @@ class Student(models.Model):
         ('Branco', 'Branco'),
         ('Pardo', 'Pardo'),
         ('Preto', 'Preto'),
+        ('Amarelo', 'Amarelo'),
         ('Não Declarada', 'Não Declarada'),
         ('Outro', 'Outro'),
     ]
@@ -148,8 +151,20 @@ class Student(models.Model):
 
     institute = models.ForeignKey(Institute, on_delete=models.CASCADE)
     address = models.ForeignKey(Address, on_delete=models.CASCADE, blank=True, null=True)
-    previous_school = models.ForeignKey(
-        PreviousSchool, on_delete=models.CASCADE)
+    # previous_school = models.ForeignKey(
+    #     PreviousSchool, on_delete=models.CASCADE)
+
+    SCHOOL_TYPE_CHOICES = [
+        ('Comunitária', 'Comunitária'),
+        ('Municipal', 'Municipal'),
+        ('Estadual', 'Estadual'),
+        ('Federal', 'Federal'),
+        ('Privada', 'Privada'),
+        ('Outra', 'Outra'),
+    ]
+    school_type = models.CharField(
+        max_length=11, choices=SCHOOL_TYPE_CHOICES, null=False, blank=False)
+
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -159,8 +174,6 @@ class Student(models.Model):
 
 
 class StudentCourse(models.Model):
-    name = models.CharField(max_length=250, blank=True,
-                            null=True)
 
     ADMISSION_PROCESS_CHOICES = [
     ('Competição geral', 'Competição geral'),
@@ -209,12 +222,13 @@ class Status(models.Model):
     ('Cancelado', 'Cancelado'),
     ('Cursando', 'Cursando'),
     ('Trancado', 'Trancado'),
-    ('Concluído', 'Concluído')
+    ('Concluído', 'Concluído'),
+    ('Desconhecido', 'Desconhecido')
 
     ]
     status = models.CharField(  
-        max_length=12, choices=STATUS_CHOICES, null=False, blank=False)
-    current_semester = models.CharField(max_length=10, null=False, blank=False)
+        max_length=12, choices=STATUS_CHOICES, default='Desconhecido', null=False, blank=False)
+    current_semester = models.CharField(max_length=10, null=True, blank=True)
     student_course = models.ForeignKey(StudentCourse, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

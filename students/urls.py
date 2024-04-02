@@ -10,7 +10,9 @@ from .views import (
     StudentsByInstitute,
     StudentsByPreviousSchool,
     StudentsByCity,
-    StudentsByCourse)
+    StudentsByCourse,
+    Student_Course_Status_View
+    )
 from django.urls import path
 
 
@@ -69,5 +71,8 @@ urlpatterns = [
          StudentsByCourse.as_view(), name='student-by-course-list'),
     path('search-student-by-course/<int:course>/<int:id>/',
          StudentsByCourse.as_view(), name='student-by-course-detail'),
+
+     path('add-student-studentcourse-status/',
+         Student_Course_Status_View.as_view(), name='student-bulk'),
 
 ]
