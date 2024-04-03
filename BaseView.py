@@ -13,7 +13,7 @@ from rest_framework.parsers import BaseParser
 class CustomPageNumberPagination(PageNumberPagination):
     page_size = 10  # Set the number of items per page
     page_size_query_param = 'page_size'
-    max_page_size = 1000
+    max_page_size = 50
 class CSVParser(BaseParser):
     """
     Parses CSV serialized data.
@@ -108,15 +108,8 @@ class BaseView(APIView):
 
         else:
             # Pagination of all objects if no specific filter or primary key provided
-            if page !=0:
-                queryset = self.model.objects.all()
-                paginator = self.pagination_class()
-                paginated_queryset = paginator.paginate_queryset(queryset, request)
-                serializer = self.serializer(paginated_queryset, many=True)
-                serializer.is_valid()
-                return paginator.get_paginated_response(serializer.data)
             serializer = self.__serializer(
-                data=self.model.objects.all(), many=True)
+            data=self.model.objects.all(), many=True)
             serializer.is_valid()
         return serializer
 
@@ -151,8 +144,19 @@ class BaseView(APIView):
         if not allowed and not self.is_allowed(request): # eu n lembro o q siginificava isso aqui é se allowed == false ?
             return self.not_allowed_response(permission_type)
         else:
-            serializer = self.to_retrieve(request=request, pk=pk, page=page)
-            return Response(serializer.data,  status=status.HTTP_200_OK)
+            print(page)
+            #page = request.query_params.get('page', 0)
+            if page !=0:  # If page parameter is provided
+                queryset = self.model.objects.all()
+                paginator = self.pagination_class()
+                paginated_queryset = paginator.paginate_queryset(queryset, request)
+                serializer = self.serializer(paginated_queryset, many=True)
+                return paginator.get_paginated_response(serializer.data)
+            else:
+                serializer = self.to_retrieve(request=request, pk=pk, page=page)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            # serializer = self.to_retrieve(request=request, pk=pk, page=page)
+            # return Response(serializer.data,  status=status.HTTP_200_OK)
 
     def post(self, request: HttpRequest, allowed: bool = False, permission_type: str = None) -> Response:
         if 'post' not in self.allowed_methods:

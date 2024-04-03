@@ -1,5 +1,6 @@
 from .views import (    
     StudentView,
+    StudentPageView,
     SearchStudentFilterView,
     StudentsBySex,
     StudentsByGender,
@@ -20,6 +21,10 @@ from django.urls import path
 urlpatterns = [
     path('student/', StudentView.as_view(), name='student-list'),
     path('student/<int:pk>/', StudentView.as_view(), name='student-detail'),
+
+    path('student-page/', StudentPageView.as_view(), name='student-page-list'),
+    path('student-page/<int:page>/', StudentPageView.as_view(), name='student-detail'),
+
     path('search-student/', SearchStudentFilterView.as_view(), name='student-list'),
 
     path('search-student-by-sex/',
