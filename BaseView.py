@@ -31,6 +31,8 @@ class CSVParser(BaseParser):
         reader = csv.DictReader(stream_string.splitlines())
         return list(reader)  # Convert CSV data into a list of dictionaries
 
+
+
 class BaseView(APIView):
     parser_classes = (CSVParser, JSONParser)
     pagination_class = CustomPageNumberPagination 

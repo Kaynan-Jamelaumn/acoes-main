@@ -214,6 +214,9 @@ class StudentCourse(models.Model):
         Student, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    class Meta:
+        # Define a combinação única de course e student
+        unique_together = ['course', 'student']
 
 
 class Status(models.Model):

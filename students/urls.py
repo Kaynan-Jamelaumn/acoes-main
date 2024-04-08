@@ -12,7 +12,9 @@ from .views import (
     StudentsByPreviousSchool,
     StudentsByCity,
     StudentsByCourse,
-    Student_Course_Status_View
+    StudentCourse_Status_View,
+    StudentCoursePageView,
+    StatusPageView,
     )
 from django.urls import path
 
@@ -77,7 +79,14 @@ urlpatterns = [
     path('search-student-by-course/<int:course>/<int:id>/',
          StudentsByCourse.as_view(), name='student-by-course-detail'),
 
-     path('add-student-studentcourse-status/',
-         Student_Course_Status_View.as_view(), name='student-bulk'),
+     path('studentcourse-status/',
+         StudentCourse_Status_View.as_view(), name='student-bulk'),
+
+    path('studentcourse-page/', StudentCoursePageView.as_view(), name='student-page-list'),
+    path('studentcourse-page/<int:page>/', StudentCoursePageView.as_view(), name='student-detail'),
+
+    path('status-page/', StatusPageView.as_view(), name='student-page-list'),
+    path('status-page/<int:page>/', StatusPageView.as_view(), name='student-detail'),
+
 
 ]

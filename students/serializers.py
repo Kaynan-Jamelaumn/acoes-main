@@ -15,11 +15,6 @@ class CitySerializer(BulkSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = City
         fields = '__all__'
-class StatusSerializer(BulkSerializerMixin, serializers.ModelSerializer):
-    class Meta:
-        model = Status
-        fields = '__all__'
-
 
 class StudentSerializer(BulkSerializerMixin, serializers.ModelSerializer):
     institute = InstituteSerializer()
@@ -54,32 +49,31 @@ class StudentSerializer(BulkSerializerMixin, serializers.ModelSerializer):
         representation = super().to_representation(instance)
         
         # Dicionários de mapeamento de nomes aleatórios com base no sexo
-        male_names = {
-            'Batman',
-            'Ninja',
-            'Homem Aranha',
-            'Rei Macaco',
-            'Coringa'
-        }
-        female_names = {
-            'Princesa',
-            'Mulan',
-            'Rapunzel',
-            'Ariel'
-        }
-
+        male_names =['Batman', 'Ninja','Homem Aranha','Rei Macaco', 'Coringa', 'Patolino', 'Pernalonga', 'Gaguinho']
+        female_names = [ 'Princesa','Mulan','Rapunzel','Ariel']
+        last_names = ['Jumélo', 'Jubirei', 'Teemo', 'Azir', 'Heimerdinger', 'Jarvan 4', 'Singed', 'Jabiroba', 'XUE HUA PIAO']
         # Verifica o sexo e escolhe um nome aleatório
         if instance.sex == 'Masculino':
-            representation['name'] = random.choice(list(male_names))
+            representation['name'] = random.choice(male_names) + ' ' + random.choice(last_names)
         elif instance.sex == 'Feminino':
-            representation['name'] = random.choice(list(female_names))
+            representation['name'] = random.choice(female_names)  + ' ' + random.choice(last_names)
+        if random.choice([True, False]):
+            representation['father_name'] = random.choice(male_names)
+        else:
+            representation['father_name'] = random.choice(female_names)
+        representation['father_name']  += ' ' + random.choice(last_names)
         return representation
 class StudentCourseSerializer(BulkSerializerMixin, serializers.ModelSerializer):
     student = StudentSerializer()
     course = CourseSerializer()
-    status = StatusSerializer()
+    #status = StatusSerializer()
 
     class Meta:
         model = StudentCourse
         fields = '__all__'
 
+class StatusSerializer(BulkSerializerMixin, serializers.ModelSerializer):
+    student_course = StudentCourseSerializer()
+    class Meta:
+        model = Status
+        fields = '__all__'
