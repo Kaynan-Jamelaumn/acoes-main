@@ -27,7 +27,7 @@ urlpatterns = [
     path('student-page/', StudentPageView.as_view(), name='student-page-list'),
     path('student-page/<int:page>/', StudentPageView.as_view(), name='student-detail'),
 
-    path('search-student/', SearchStudentFilterView.as_view(), name='student-list'),
+#     path('search-student/', SearchStudentFilterView.as_view(), name='student-list'),
 
     path('search-student-by-sex/',
          StudentsBySex.as_view(), name='student-by-sex-list'),
@@ -49,15 +49,15 @@ urlpatterns = [
     path('search-student-by-disability/<str:disability>/',
          StudentsByDisability.as_view(), name='student-by-disability-detail'),
 
-    path('search-student-by-mother/',
-         StudentsByMother.as_view(), name='student-by-mother-list'),
-    path('search-student-by-mother/<str:mother_name>/',
-         StudentsByMother.as_view(), name='student-by-mother-detail'),
+#     path('search-student-by-mother/',
+#          StudentsByMother.as_view(), name='student-by-mother-list'),
+#     path('search-student-by-mother/<str:mother_name>/',
+#          StudentsByMother.as_view(), name='student-by-mother-detail'),
 
-    path('search-student-by-father/',
-         StudentsByFather.as_view(), name='student-by-father-list'),
-    path('search-student-by-father/<str:father_name>/',
-         StudentsByFather.as_view(), name='student-by-father-detail'),
+#     path('search-student-by-father/',
+#          StudentsByFather.as_view(), name='student-by-father-list'),
+#     path('search-student-by-father/<str:father_name>/',
+#          StudentsByFather.as_view(), name='student-by-father-detail'),
 
     path('search-student-by-institute/',
          StudentsByInstitute.as_view(), name='student-by-institute-list'),
