@@ -73,7 +73,7 @@ class StudentView(BaseView):
  
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
-            for row in items[13000:15000]:
+            for row in items[14500:]:
                 try:
                     birth_date = row.get('mes_ano_nascimento')
                     disability = row.get('Deficiencia')
@@ -415,7 +415,7 @@ class StudentCourse_Status_View(BaseView):
         else:
             statuses_to_create = []
             print(len(items))
-            for row in items[11000:]:
+            for row in items[15000:]:
                 try:
                     birth_date = row.get('mes_ano_nascimento')
                     father_name = row.get('nome_pai')

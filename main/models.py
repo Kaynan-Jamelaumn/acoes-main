@@ -163,7 +163,7 @@ class Student(models.Model):
         ('Outra', 'Outra'),
     ]
     school_type = models.CharField(
-        max_length=11, choices=SCHOOL_TYPE_CHOICES, null=False, blank=False)
+        max_length=30, choices=SCHOOL_TYPE_CHOICES, null=False, blank=False)
 
 
     created_at = models.DateTimeField(auto_now_add=True)
